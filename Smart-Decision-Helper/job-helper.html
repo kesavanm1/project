@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Decision Helper - Job Offer Comparison</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #14213D; --secondary: #2563EB; --accent: #7C3AED; --bg: #F5F7FB; --surface: #FFFFFF; --surface-2: #EEF2F9;
+    --text: #14213D; --text-muted: #64748B; --border: #E2E8F0; --success: #16A34A; --warning: #F59E0B; --error: #DC2626;
+    --shadow: 0 1px 3px rgba(20,33,61,0.08), 0 1px 2px rgba(20,33,61,0.06);
+    --shadow-lg: 0 10px 30px rgba(20,33,61,0.10); --radius: 14px; --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #0B1220; --surface: #111A2E; --surface-2: #1A2540; --text: #E2E8F0; --text-muted: #94A3B8; --border: #243352;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4); --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; transition: background .3s, color .3s; }
+  a { color:var(--secondary); text-decoration:none; }
+  .app { display:flex; min-height:100vh; }
+  .sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:50; transition: transform .3s ease; }
+  .sidebar .brand { padding:22px 20px; display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; color:var(--primary); border-bottom:1px solid var(--border); }
+  [data-theme="dark"] .sidebar .brand { color:#93C5FD; }
+  .sidebar .brand i { color:var(--secondary); font-size:1.3rem; }
+  .nav-section { padding:12px 12px; flex:1; overflow-y:auto; }
+  .nav-section h4 { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); padding:10px 12px 6px; }
+  .nav-link { display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:var(--radius-sm); color:var(--text-muted); font-size:.92rem; font-weight:500; margin-bottom:2px; transition: all .2s; }
+  .nav-link:hover { background:var(--surface-2); color:var(--text); }
+  .nav-link.active { background:linear-gradient(135deg,var(--secondary),var(--accent)); color:#fff; }
+  .nav-link i { width:20px; text-align:center; }
+  .main { flex:1; margin-left:240px; display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:64px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:40; }
+  .topbar .menu-btn { display:none; background:none; border:none; color:var(--text); font-size:1.3rem; cursor:pointer; }
+  .topbar .page-title { font-weight:600; font-size:1rem; }
+  .topbar .actions { display:flex; align-items:center; gap:12px; }
+  .theme-toggle { background:var(--surface-2); border:1px solid var(--border); width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); transition: all .25s; }
+  .theme-toggle:hover { transform: scale(1.08); }
+  .content { padding:26px 24px 60px; max-width:1280px; margin:0 auto; width:100%; }
+  .content > header { margin-bottom:22px; }
+  .content > header h1 { font-size:1.6rem; font-weight:700; }
+  .content > header p { color:var(--text-muted); margin-top:4px; max-width:680px; font-size:.95rem; }
+  .grid { display:grid; gap:18px; }
+  .summary-cards { grid-template-columns: repeat(5,1fr); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }
+  .stat-card { display:flex; flex-direction:column; gap:6px; }
+  .stat-card .label { font-size:.78rem; color:var(--text-muted); font-weight:500; }
+  .stat-card .value { font-size:1.5rem; font-weight:700; }
+  .stat-card .icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:6px; }
+  .stat-card .icon.blue { background:rgba(37,99,235,.12); color:var(--secondary); }
+  .stat-card .icon.purple { background:rgba(124,58,237,.12); color:var(--accent); }
+  .stat-card .icon.green { background:rgba(22,163,74,.12); color:var(--success); }
+  .stat-card .icon.orange { background:rgba(245,158,11,.12); color:var(--warning); }
+  .stat-card .icon.navy { background:rgba(20,33,61,.10); color:var(--primary); }
+  [data-theme="dark"] .stat-card .icon.navy { color:#93C5FD; background:rgba(147,197,253,.12); }
+  .section-title { font-size:1.15rem; font-weight:600; margin:26px 0 14px; display:flex; align-items:center; gap:10px; }
+  .section-title i { color:var(--secondary); }
+  .filters { display:grid; grid-template-columns: repeat(2,1fr); gap:16px; }
+  .filter-item { display:flex; flex-direction:column; gap:6px; }
+  .filter-item label { font-size:.82rem; font-weight:600; color:var(--text-muted); display:flex; justify-content:space-between; }
+  .filter-item label .val { color:var(--secondary); font-weight:700; }
+  input[type="text"], select { padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:.9rem; transition: border .2s, box-shadow .2s; width:100%; }
+  input[type="text"]:focus, select:focus { outline:none; border-color:var(--secondary); box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  input[type="range"] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:6px; background:var(--surface-2); outline:none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:var(--secondary); cursor:pointer; border:3px solid var(--surface); box-shadow:0 1px 4px rgba(0,0,0,.2); transition: transform .15s; }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--secondary); cursor:pointer; border:3px solid var(--surface); }
+  .btn { padding:10px 16px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-size:.88rem; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition: all .2s; }
+  .btn-ghost { background:var(--surface-2); color:var(--text); }
+  .btn-ghost:hover { background:var(--border); }
+  .job-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap:16px; }
+  .job-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px; transition: transform .2s, box-shadow .2s; }
+  .job-card:hover { transform: translateY(-3px); box-shadow:var(--shadow-lg); }
+  .job-card .head { display:flex; justify-content:space-between; align-items:flex-start; }
+  .job-card .company { font-size:.78rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  .job-card .salary { font-weight:700; color:var(--secondary); }
+  .job-card .role { font-size:1.02rem; font-weight:600; }
+  .job-card .specs { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:var(--surface-2); color:var(--text-muted); font-size:.74rem; padding:3px 9px; border-radius:20px; font-weight:500; }
+  .job-card .rating { display:flex; align-items:center; gap:4px; font-size:.85rem; }
+  .job-card .rating i { color:var(--warning); }
+  .job-card .benefits { display:flex; flex-wrap:wrap; gap:4px; }
+  .benefit-pill { background:rgba(22,163,74,.10); color:var(--success); font-size:.72rem; padding:2px 8px; border-radius:20px; font-weight:600; }
+  .job-card .score-badge { font-size:.8rem; font-weight:700; padding:4px 10px; border-radius:20px; align-self:flex-start; }
+  .add-btn { margin-top:auto; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:.82rem; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; transition: all .2s; }
+  .add-btn:hover { background:var(--secondary); color:#fff; border-color:var(--secondary); }
+  .add-btn.added { background:var(--success); color:#fff; border-color:var(--success); }
+  .compare-wrapper { overflow-x:auto; }
+  .compare-table { width:100%; border-collapse:collapse; min-width:800px; }
+  .compare-table th, .compare-table td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); font-size:.88rem; }
+  .compare-table th { background:var(--surface-2); font-weight:600; color:var(--text-muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+  .compare-table td .remove-link { color:var(--error); cursor:pointer; font-size:.78rem; font-weight:600; }
+  .compare-table tr.best-row { background:rgba(22,163,74,.06); }
+  .best-card { background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.08)); border:1px solid rgba(124,58,237,.25); border-radius:var(--radius); padding:20px; display:flex; gap:16px; align-items:center; }
+  .best-card .crown { width:54px; height:54px; border-radius:14px; background:linear-gradient(135deg,var(--secondary),var(--accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.5rem; flex-shrink:0; }
+  .best-card .info h3 { font-size:1.1rem; }
+  .best-card .info p { color:var(--text-muted); font-size:.88rem; margin-top:4px; }
+  .best-card .score { margin-left:auto; text-align:center; }
+  .best-card .score .num { font-size:2rem; font-weight:800; color:var(--success); }
+  .chart-container { position:relative; height:300px; }
+  .empty-state { text-align:center; padding:50px 20px; color:var(--text-muted); }
+  .empty-state i { font-size:2.5rem; margin-bottom:12px; color:var(--border); }
+  .empty-state h3 { font-size:1.05rem; color:var(--text); margin-bottom:6px; }
+  .empty-state p { font-size:.88rem; }
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--success); padding:12px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:.88rem; font-weight:500; z-index:100; transform:translateY(120%); transition: transform .35s cubic-bezier(.2,.8,.2,1); max-width:320px; }
+  .toast.show { transform: translateY(0); }
+  .toast.error { border-left-color:var(--error); }
+  .toast.warn { border-left-color:var(--warning); }
+  footer { text-align:center; padding:24px; color:var(--text-muted); font-size:.82rem; border-top:1px solid var(--border); margin-top:40px; }
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:45; }
+  .overlay.show { display:block; }
+  .badge-flag { font-size:.72rem; padding:2px 8px; border-radius:20px; font-weight:600; }
+  .badge-flag.over { background:rgba(220,38,38,.1); color:var(--error); }
+  .badge-flag.ok { background:rgba(22,163,74,.1); color:var(--success); }
+  .badge-flag.mismatch { background:rgba(245,158,11,.12); color:var(--warning); }
+  @media (max-width:1024px){ .summary-cards{grid-template-columns:repeat(3,1fr);} .filters{grid-template-columns:1fr;} }
+  @media (max-width:768px){
+    .sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .main{margin-left:0;}
+    .topbar .menu-btn{display:block;} .summary-cards{grid-template-columns:repeat(2,1fr);}
+    .content{padding:18px 16px 50px;} .best-card{flex-direction:column;text-align:center;} .best-card .score{margin-left:0;}
+  }
+  @media (max-width:480px){ .summary-cards{grid-template-columns:1fr 1fr;} }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+  :root{--primary:#17233d;--secondary:#5b5ce2;--accent:#12b8a6;--bg:#f4f6fb;--surface:#fff;--surface-2:#eef1f8;--text:#18243c;--text-muted:#778199;--border:#e4e8f1;--shadow:0 10px 32px rgba(27,39,68,.055);--shadow-lg:0 22px 56px rgba(27,39,68,.13);--radius:20px;--radius-sm:12px}
+  [data-theme="dark"]{--primary:#dce7ff;--secondary:#8b8cf5;--accent:#3cd6c4;--bg:#0b1020;--surface:#11182b;--surface-2:#19233a;--text:#edf2ff;--text-muted:#9ba9c4;--border:#26324c;--shadow:0 10px 32px rgba(0,0,0,.2);--shadow-lg:0 22px 56px rgba(0,0,0,.35)}
+  html{scroll-behavior:smooth;scroll-padding-top:92px}body{background:radial-gradient(ellipse at 82% 0%,rgba(91,92,226,.07),transparent 30%),var(--bg);font-family:Inter,"Segoe UI",system-ui,sans-serif;letter-spacing:-.012em}
+  .sidebar{background:linear-gradient(180deg,#141d35,#1a2544 62%,#182c49);border-right:0;box-shadow:12px 0 42px rgba(18,28,52,.1);padding:10px}.sidebar .brand{color:#f7f8ff!important;padding:24px 16px;font-size:1.04rem;letter-spacing:-.03em}.sidebar .brand i{width:38px;height:38px;display:grid;place-items:center;border-radius:13px;color:#fff;background:linear-gradient(140deg,#6968f5,#23c8b3);box-shadow:0 8px 20px #111b3d}.nav-section h4{color:#7787a7;padding:18px 12px 8px;letter-spacing:.14em}.nav-link{color:#a7b2c8;border-radius:12px;padding:12px;font-weight:600}.nav-link:hover{background:#ffffff12;color:white}.nav-link.active{background:linear-gradient(110deg,#5b5ce2,#7a61e9 55%,#22bcae);box-shadow:0 10px 26px #070d2070;color:white}
+  .main{min-width:0}.topbar{height:74px;padding:0 clamp(16px,3vw,42px);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border-bottom-color:color-mix(in srgb,var(--border) 68%,transparent)}.topbar .page-title{font-size:.92rem;font-weight:750;letter-spacing:.015em}.theme-toggle{border-radius:14px;width:44px;height:44px;box-shadow:var(--shadow)}.theme-toggle:hover{transform:translateY(-2px) rotate(-5deg)}
+  .content{max-width:1480px;padding:clamp(20px,3vw,42px) clamp(16px,3vw,42px) 80px}.content>header{position:relative;isolation:isolate;overflow:hidden;padding:clamp(24px,4vw,48px);margin-bottom:26px;border-radius:28px;color:white;background:linear-gradient(120deg,#18254a 0%,#343c86 48%,#5655d8 100%);box-shadow:0 24px 58px rgba(50,57,139,.23)}.content>header:after{content:"";position:absolute;z-index:-1;width:380px;height:380px;right:-115px;top:-210px;border:1px solid #ffffff24;border-radius:50%;box-shadow:0 0 0 40px #ffffff08,0 0 0 80px #ffffff06}.content>header:before{content:"";position:absolute;z-index:-1;width:190px;height:190px;right:13%;bottom:-155px;border-radius:50%;background:#20c5b344;filter:blur(4px)}.content>header h1{max-width:780px;font-size:clamp(2rem,4vw,3.55rem);line-height:1.04;letter-spacing:-.065em}.content>header p{max-width:760px;margin-top:12px;color:#e0e5ff;font-size:1rem}.content>header p:last-child{display:inline-flex;align-items:center;gap:7px;margin-top:20px;padding:7px 12px;border:1px solid #ffffff2b;border-radius:99px;background:#ffffff12;color:#f6f7ff;font-size:.76rem}
+  .summary-cards{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.card,.stat-card,.sdh-panel{border-radius:20px;border-color:var(--border);box-shadow:var(--shadow)}.stat-card{position:relative;min-height:145px;overflow:hidden;padding:19px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 92%,var(--secondary)))}.stat-card:after{content:"";position:absolute;width:96px;height:96px;right:-38px;bottom:-45px;border-radius:50%;background:color-mix(in srgb,var(--secondary) 8%,transparent)}.stat-card .icon{width:42px;height:42px;border-radius:14px}.stat-card .value{font-size:clamp(1.05rem,2vw,1.4rem);line-height:1.22;letter-spacing:-.04em}.stat-card .label{font-weight:650;letter-spacing:.015em}
+  .section-title{margin:34px 0 15px;font-size:1.28rem;font-weight:800;letter-spacing:-.035em}.section-title>i{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:color-mix(in srgb,var(--secondary) 12%,transparent);font-size:.9rem}.filters{gap:20px}.filter-item label{font-size:.78rem;letter-spacing:.02em}.filter-item label .val{font-variant-numeric:tabular-nums}
+  input[type=text],select,input[type=number]{border-radius:12px!important;border-color:var(--border)!important;background-color:var(--surface)!important;min-height:44px;padding:11px 13px!important;font:inherit!important;color:var(--text)!important}input:focus,select:focus{border-color:var(--secondary)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--secondary) 15%,transparent)!important}input[type=range]{accent-color:var(--secondary);height:7px}
+  .btn{min-height:42px;border-radius:12px;font-weight:750;letter-spacing:-.01em}.btn-primary{background:linear-gradient(115deg,#555be3,#7760e8 57%,#13afaa);box-shadow:0 9px 22px #5155cf35}.btn-ghost{border:1px solid var(--border)}.btn:hover{transform:translateY(-2px)}.theme-toggle:focus-visible,.btn:focus-visible,.nav-link:focus-visible,.add-btn:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 65%,white);outline-offset:3px}
+  .job-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px}.job-card{position:relative;overflow:hidden;border-radius:20px;padding:50px 18px 18px;border-color:var(--border);box-shadow:var(--shadow);background:linear-gradient(165deg,var(--surface),color-mix(in srgb,var(--surface) 96%,var(--secondary)))}.job-card:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,var(--secondary),var(--accent));opacity:.75}.job-card:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--secondary) 45%,var(--border));box-shadow:var(--shadow-lg)}.job-card .role{font-size:1.12rem;font-weight:800;letter-spacing:-.035em}.job-card .salary{font-size:1.03rem}.chip,.course-pill,.benefit-pill{padding:5px 10px;border-radius:99px;font-size:.72rem}.add-btn{min-height:42px;border-radius:12px!important;font-weight:750!important;transition:all .2s ease}.add-btn:hover{box-shadow:0 8px 18px rgba(67,80,150,.13)}
+  .best-card{border-radius:20px!important;padding:22px!important;box-shadow:var(--shadow-lg)}.compare-wrapper{border-radius:14px}.compare-table th{letter-spacing:.08em}.compare-table td,.compare-table th{padding:14px 15px}.chart-container,.sdh-chart-wrap{border-radius:14px}.empty-state{border:1px dashed color-mix(in srgb,var(--secondary) 35%,var(--border));border-radius:20px!important;background:color-mix(in srgb,var(--surface) 88%,var(--secondary));padding:36px 22px!important}.empty-state>i{color:var(--secondary)}
+  .sdh-panel{padding:22px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 97%,var(--secondary)));transition:transform .22s,border-color .22s}.sdh-panel:hover{border-color:color-mix(in srgb,var(--secondary) 30%,var(--border))}.sdh-panel h2{font-size:1.15rem;font-weight:850;letter-spacing:-.035em}.sdh-panel p{color:var(--text-muted)}.sdh-stat{border:1px solid color-mix(in srgb,var(--border) 80%,var(--secondary));border-radius:15px;padding:16px}.sdh-stat strong{margin-top:5px;color:var(--text);font-size:1.18rem;letter-spacing:-.03em}.sdh-weight input{width:100%;font-weight:700}.sdh-tools label,.sdh-weight label{font-weight:700;color:var(--text-muted)}.sdh-row,.sdh-analysis article{border:1px solid var(--border);border-radius:14px}.sdh-row strong{color:var(--text)}.sdh-analysis article{background:color-mix(in srgb,var(--surface) 85%,var(--secondary));padding:16px}.sdh-match{height:9px}.sdh-match span{background:linear-gradient(90deg,var(--secondary),var(--accent));border-radius:99px}
+  #sdh-workspace-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:10px;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}#sdh-workspace-nav a{padding:9px 13px;border-radius:10px;color:var(--text-muted);font-size:.8rem;font-weight:750;transition:all .2s}#sdh-workspace-nav a:hover,#sdh-workspace-nav a:focus-visible{background:color-mix(in srgb,var(--secondary) 12%,var(--surface));color:var(--secondary);outline:none}
+  .sdh-favorite-toggle{position:absolute;z-index:2;right:14px;top:13px;width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text-muted);cursor:pointer;box-shadow:var(--shadow);transition:all .2s}.sdh-favorite-toggle:hover,.sdh-favorite-toggle.is-favorite{color:#e4a300;border-color:#e4a30055;background:color-mix(in srgb,#ffc83d 14%,var(--surface));transform:scale(1.06)}.sdh-favorites-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin:12px 0;padding:13px 15px;border:1px solid var(--border);border-radius:15px;background:var(--surface);box-shadow:var(--shadow)}.sdh-favorites-bar .btn.active{background:var(--secondary);color:#fff}.sdh-favorites-bar strong{font-size:.84rem}.sdh-list-view{grid-template-columns:1fr!important}.sdh-list-view>.laptop-card,.sdh-list-view>.college-card,.sdh-list-view>.job-card{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(210px,1.5fr) minmax(220px,1fr);align-items:center;gap:14px;padding:22px 18px 18px 50px}.sdh-list-view .head{align-self:start}.sdh-list-view .specs,.sdh-list-view .courses,.sdh-list-view .benefits{align-content:center}.sdh-list-view .sdh-meta{border-top:0;border-left:1px solid var(--border);padding:4px 0 4px 14px}.sdh-list-view .add-btn{grid-column:3}
+  footer{margin-top:46px;padding:24px 0;border-top:1px solid var(--border);color:var(--text-muted);font-size:.78rem}
+  @media(max-width:1100px){.summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:768px){.sidebar{padding:0}.content{padding:18px 15px 64px}.content>header{border-radius:21px;padding:27px 22px}.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat-card{min-height:130px;padding:14px}.sdh-panel{padding:17px}.section-title{font-size:1.12rem;margin-top:28px}.topbar{height:64px}.filters{grid-template-columns:1fr}.sdh-favorites-bar{align-items:flex-start}.sdh-workspace-nav{overflow:auto}.sdh-list-view>.laptop-card,.sdh-list-view>.college-card,.sdh-list-view>.job-card{grid-template-columns:1fr;padding-left:50px}.sdh-list-view .sdh-meta{border-left:0;border-top:1px solid var(--border);padding:10px 0}.sdh-list-view .add-btn{grid-column:1}}
+  @media(max-width:420px){.content>header h1{font-size:2rem}.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-card .value{font-size:1rem}.section-title{gap:8px}.sdh-actions .btn{flex:1;justify-content:center}.sdh-workspace-nav a{font-size:.74rem;padding:8px}}
+  body[data-helper="laptop"]{--secondary:#3869f5;--accent:#21cfb3;--glow:rgba(48,111,255,.2)}
+  body[data-helper="college"]{--secondary:#8055e8;--accent:#ffb84d;--glow:rgba(137,86,255,.2)}
+  body[data-helper="job"]{--secondary:#9852ed;--accent:#36d4cf;--glow:rgba(160,77,239,.2)}
+  :root{--primary:#101936;--bg:#f4f6fc;--surface:#ffffff;--surface-2:#f0f3fb;--text:#18223c;--text-muted:#75809a;--border:#e3e8f4;--shadow:0 12px 34px rgba(29,43,82,.07);--shadow-lg:0 24px 60px rgba(25,39,82,.15);--radius:22px}
+  [data-theme="dark"]{--bg:#080c18;--surface:#11182a;--surface-2:#182238;--text:#f2f5ff;--text-muted:#a1aec9;--border:#27334b;--shadow:0 14px 36px rgba(0,0,0,.24);--shadow-lg:0 28px 68px rgba(0,0,0,.42)}
+  html{scroll-padding-top:100px}
+  body{font-family:"DM Sans",Inter,"Segoe UI",sans-serif;letter-spacing:-.014em;background-color:var(--bg);background-image:radial-gradient(ellipse at 82% -8%,var(--glow,rgba(56,105,245,.13)),transparent 34%),radial-gradient(ellipse at 8% 42%,rgba(28,206,181,.055),transparent 28%),linear-gradient(rgba(99,119,164,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(99,119,164,.035) 1px,transparent 1px);background-size:auto,auto,32px 32px,32px 32px;transition:color .3s}
+  [data-theme="dark"] body{background-image:radial-gradient(ellipse at 82% -8%,var(--glow,rgba(56,105,245,.2)),transparent 35%),radial-gradient(ellipse at 8% 42%,rgba(28,206,181,.07),transparent 28%),linear-gradient(rgba(148,164,203,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(148,164,203,.035) 1px,transparent 1px)}
+  html[data-theme="light"]{color-scheme:light;background-color:var(--bg)}
+  html[data-theme="dark"]{color-scheme:dark;background-color:var(--bg)}
+  html[data-theme="light"] body,html[data-theme="dark"] body{background-color:var(--bg)!important;color:var(--text)}
+  h1,h2,h3,h4,.stat-card .value,.sdh-stat strong,.sdh-whatif-stat strong{font-family:"Space Grotesk","DM Sans",sans-serif}
+  .sidebar{background:linear-gradient(165deg,#0d1428 0%,#111b36 58%,#102b3e 100%);box-shadow:18px 0 52px rgba(9,17,39,.2);border-right:1px solid rgba(168,185,235,.12)}
+  .sidebar:after{content:"";position:absolute;inset:auto 16px 24px;height:2px;border-radius:4px;background:linear-gradient(90deg,transparent,var(--secondary),var(--accent),transparent);opacity:.8}
+  .sidebar .brand{position:relative;font-family:"Space Grotesk",sans-serif;letter-spacing:-.045em}
+  .sidebar .brand i{animation:brand-pulse 4s ease-in-out infinite}
+  .nav-section h4{font-size:.65rem;letter-spacing:.18em}
+  .nav-link{position:relative;isolation:isolate;overflow:hidden;transition:transform .22s ease,background .22s,color .22s}
+  .nav-link:before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(100deg,var(--secondary),var(--accent));opacity:0;transition:opacity .22s}
+  .nav-link:hover{transform:translateX(4px)}.nav-link.active:before{opacity:1}.nav-link.active{background:transparent}
+  .topbar{box-shadow:0 8px 26px rgba(19,31,66,.04)}
+  .topbar .page-title{font-family:"Space Grotesk",sans-serif;font-size:.98rem;letter-spacing:-.025em}
+  .content>header{isolation:isolate;border:1px solid rgba(190,205,255,.17);background:linear-gradient(118deg,#111a34 0%,#263b78 43%,color-mix(in srgb,var(--secondary) 76%,#242351) 100%);box-shadow:0 28px 70px color-mix(in srgb,var(--secondary) 20%,transparent);animation:hero-arrive .65s cubic-bezier(.2,.8,.2,1) both}
+  .content>header:after{right:-85px;top:-250px;width:460px;height:460px;border-color:#ffffff30;box-shadow:0 0 0 34px #ffffff0a,0 0 0 78px #ffffff08,0 0 0 122px #ffffff05;animation:orbit-drift 34s linear infinite}
+  .content>header:before{right:25%;bottom:-185px;width:270px;height:230px;background:color-mix(in srgb,var(--accent) 45%,transparent);filter:blur(58px);animation:glow-breathe 7s ease-in-out infinite}
+  .content>header h1{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.065em;text-wrap:balance}
+  .content>header h1:before{content:"SMART DECISION STUDIO  /  AI-INSPIRED";display:block;margin-bottom:16px;color:#a6f5e8;font-family:"DM Sans",sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em}
+  .content>header p{line-height:1.75}
+  .summary-cards{gap:15px}
+  .stat-card{border:1px solid color-mix(in srgb,var(--border) 80%,var(--secondary));transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s;animation:rise-in .55s both}
+  .stat-card:nth-child(2){animation-delay:.06s}.stat-card:nth-child(3){animation-delay:.12s}.stat-card:nth-child(4){animation-delay:.18s}.stat-card:nth-child(5){animation-delay:.24s}.stat-card:nth-child(6){animation-delay:.3s}
+  .stat-card:hover{transform:translateY(-6px);border-color:color-mix(in srgb,var(--secondary) 50%,var(--border));box-shadow:0 22px 48px color-mix(in srgb,var(--secondary) 14%,transparent)}
+  .stat-card .icon{box-shadow:0 8px 20px color-mix(in srgb,var(--secondary) 13%,transparent)}
+  .stat-card .value{font-weight:700;font-variant-numeric:tabular-nums}
+  .section-title{font-family:"Space Grotesk",sans-serif;position:relative;letter-spacing:-.045em}
+  .section-title:after{content:"";height:1px;flex:1;margin-left:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--secondary) 35%,var(--border)),transparent)}
+  .section-title>i{color:var(--secondary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--secondary) 15%,transparent)}
+  .card,.sdh-panel{backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--border) 84%,var(--secondary));box-shadow:var(--shadow)}
+  .sdh-panel{position:relative;overflow:visible;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 96%,var(--secondary)),var(--surface));transition:transform .25s,border-color .25s,box-shadow .25s}
+  .sdh-panel:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+  .sdh-panel:has(.sdh-facet-dropdown[open]){z-index:40;transform:none}
+  .sdh-panel h2{font-family:"Space Grotesk",sans-serif}
+  .laptop-card,.college-card,.job-card{animation:rise-in .48s both;transition:transform .26s cubic-bezier(.2,.8,.2,1),box-shadow .26s,border-color .26s}
+  .laptop-card:nth-child(3n+2),.college-card:nth-child(3n+2),.job-card:nth-child(3n+2){animation-delay:.07s}
+  .laptop-card:nth-child(3n+3),.college-card:nth-child(3n+3),.job-card:nth-child(3n+3){animation-delay:.14s}
+  .laptop-card:before,.college-card:before,.job-card:before{height:3px;background:linear-gradient(90deg,var(--secondary),var(--accent),var(--secondary));background-size:200% 100%;animation:accent-flow 5s linear infinite}
+  .laptop-card:hover,.college-card:hover,.job-card:hover{transform:translateY(-7px) scale(1.012);box-shadow:0 25px 55px color-mix(in srgb,var(--secondary) 16%,transparent)}
+  .btn,.add-btn,.theme-toggle{transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s,filter .2s}
+  .btn:active,.add-btn:active,.theme-toggle:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(110deg,var(--secondary),color-mix(in srgb,var(--secondary) 72%,#7462f0),var(--accent));background-size:180% 100%;transition:background-position .35s,transform .2s,box-shadow .2s}
+  .btn-primary:hover{background-position:100% 0;box-shadow:0 12px 26px color-mix(in srgb,var(--secondary) 32%,transparent)}
+  .btn-ghost:hover{border-color:color-mix(in srgb,var(--secondary) 40%,var(--border));color:var(--secondary)}
+  input,select,.sdh-facet-dropdown summary{transition:border-color .2s,box-shadow .2s,background-color .2s}
+  input:focus-visible,select:focus-visible,.sdh-facet-dropdown summary:focus-visible{outline:2px solid color-mix(in srgb,var(--secondary) 55%,transparent);outline-offset:2px}
+  .sdh-facet-menu{backdrop-filter:blur(16px)}
+  .sdh-whatif-stat{transition:transform .22s,box-shadow .22s,border-color .22s}
+  .sdh-whatif-stat:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--secondary) 42%,var(--border));box-shadow:var(--shadow-lg)}
+  #sdh-workspace-nav{position:sticky;top:82px;z-index:25;backdrop-filter:blur(16px);background:color-mix(in srgb,var(--surface) 86%,transparent)}
+  #sdh-workspace-nav a{transition:transform .2s,background .2s,color .2s}
+  #sdh-workspace-nav a:hover{transform:translateY(-2px)}
+  .chart-container,.sdh-chart-wrap{border:1px solid color-mix(in srgb,var(--border) 88%,var(--secondary));background:color-mix(in srgb,var(--surface) 94%,var(--secondary))}
+  .empty-state{animation:rise-in .4s ease both}
+  .sdh-favorites-bar{border:1px solid var(--border);border-radius:16px;background:color-mix(in srgb,var(--surface) 90%,var(--secondary));box-shadow:var(--shadow)}
+  .sdh-favorite-toggle{transition:transform .2s,color .2s,background .2s}
+  .sdh-favorite-toggle:hover{transform:scale(1.12) rotate(-8deg)}
+  #toast,.toast{backdrop-filter:blur(14px);box-shadow:0 18px 44px rgba(12,21,48,.22)}
+  ::selection{background:color-mix(in srgb,var(--secondary) 28%,transparent);color:var(--text)}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:99px;background:color-mix(in srgb,var(--secondary) 36%,var(--text-muted));background-clip:padding-box}::-webkit-scrollbar-track{background:transparent}
+  @keyframes hero-arrive{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes rise-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes orbit-drift{to{transform:rotate(360deg)}}
+  @keyframes glow-breathe{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+  @keyframes accent-flow{to{background-position:200% 0}}
+  @keyframes brand-pulse{0%,100%{box-shadow:0 8px 20px #111b3d}50%{box-shadow:0 8px 28px color-mix(in srgb,var(--accent) 42%,#111b3d)}}
+  @media(max-width:900px){.summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:768px){#sdh-workspace-nav{top:68px}.content>header h1:before{font-size:.58rem;letter-spacing:.15em}.sdh-panel:hover{transform:none}.laptop-card:hover,.college-card:hover,.job-card:hover{transform:translateY(-3px)}}
+  @media(max-width:520px){.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.content>header{background:linear-gradient(145deg,#111a34,#263b78 65%,color-mix(in srgb,var(--secondary) 75%,#242351))}.sdh-panel{border-radius:18px}.sdh-whatif-stat{padding:10px}.sdh-whatif-stat strong{font-size:1rem}}
+  /* Decision studio visual system */
+  :root{--bg:#f1f3f9;--surface:#fff;--surface-2:#f6f7fc;--text:#17213b;--text-muted:#71809b;--border:#dfe5f2;--radius:22px;--shadow:0 12px 30px rgba(27,39,76,.06);--shadow-lg:0 24px 60px rgba(19,31,68,.14)}
+  [data-theme="dark"]{--bg:#090e1b;--surface:#111a2b;--surface-2:#172238;--text:#f0f4ff;--text-muted:#9cabc5;--border:#293650;--shadow:0 14px 36px rgba(0,0,0,.24);--shadow-lg:0 24px 60px rgba(0,0,0,.42)}
+  body{background-image:radial-gradient(ellipse at 88% 0%,color-mix(in srgb,var(--secondary) 11%,transparent),transparent 30%),radial-gradient(ellipse at 52% 42%,rgba(32,196,175,.045),transparent 35%),linear-gradient(135deg,rgba(255,255,255,.52),transparent 48%),linear-gradient(rgba(99,119,164,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(99,119,164,.035) 1px,transparent 1px);background-size:auto,auto,auto,32px 32px,32px 32px}
+  [data-theme="dark"] body{background-image:radial-gradient(ellipse at 88% 0%,color-mix(in srgb,var(--secondary) 17%,transparent),transparent 32%),radial-gradient(ellipse at 52% 42%,rgba(32,196,175,.055),transparent 35%),linear-gradient(rgba(148,164,203,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(148,164,203,.035) 1px,transparent 1px);background-size:auto,auto,32px 32px,32px 32px}
+  .app{background:transparent}
+  .sidebar{width:252px;padding:13px 12px;background:linear-gradient(158deg,#0b1224 0%,#111b35 60%,#123044 100%);box-shadow:16px 0 52px rgba(9,17,39,.2)}
+  .sidebar .brand{margin:2px 0 16px;padding:15px 11px;border-bottom:1px solid rgba(193,207,244,.14);font-size:1.04rem}
+  .sidebar .brand i{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,var(--secondary),var(--accent));box-shadow:0 9px 24px color-mix(in srgb,var(--secondary) 38%,transparent)}
+  .nav-section h4{padding:17px 12px 8px;color:#7f91b2;font-size:.64rem;letter-spacing:.2em}
+  .nav-link{margin:3px 0;border:1px solid transparent;border-radius:13px;padding:12px 13px;color:#aab7d0}
+  .nav-link.active{border-color:#ffffff20;background:linear-gradient(105deg,color-mix(in srgb,var(--secondary) 93%,#fff),color-mix(in srgb,var(--accent) 84%,var(--secondary)));box-shadow:0 12px 28px color-mix(in srgb,var(--secondary) 27%,transparent)}
+  .main{margin-left:252px}
+  .topbar{position:sticky;top:0;z-index:35;height:72px;border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent);background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(20px)}
+  .topbar .page-title{font-size:.9rem;font-weight:750;color:var(--text);letter-spacing:-.02em}
+  .theme-toggle{border:1px solid var(--border);background:var(--surface);color:var(--secondary)}
+  .content{max-width:1580px;padding:clamp(22px,3vw,48px) clamp(18px,3.2vw,52px) 90px}
+  .content>header{min-height:270px;display:flex;flex-direction:column;justify-content:center;padding:clamp(30px,5vw,62px);border:1px solid rgba(205,216,255,.17);border-radius:32px;background:radial-gradient(ellipse at 84% 20%,color-mix(in srgb,var(--secondary) 47%,transparent),transparent 36%),linear-gradient(115deg,#101a35 0%,#172b54 52%,#111e3c 100%);box-shadow:0 32px 80px rgba(20,33,78,.2)}
+  .content>header:after{right:6%;top:-90px;width:365px;height:365px;border:1px solid #ffffff2b;box-shadow:0 0 0 28px #ffffff09,0 0 0 64px #ffffff08,0 0 0 102px #ffffff05;animation:orbit-drift 48s linear infinite}
+  .content>header:before{right:17%;bottom:-120px;width:300px;height:180px;background:color-mix(in srgb,var(--accent) 40%,transparent);filter:blur(55px)}
+  .content>header h1{z-index:1;max-width:850px;font-size:clamp(2.4rem,5vw,4.7rem);line-height:.98;letter-spacing:-.075em;text-wrap:balance}
+  .content>header h1:before{margin-bottom:20px;font-size:.67rem;letter-spacing:.22em}
+  .content>header p{z-index:1;max-width:680px;font-size:1.02rem;line-height:1.7}
+  .content>header p:last-child{align-self:flex-start;border-radius:10px;background:#ffffff12;color:#d9e3ff}
+  .summary-cards{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:0 0 34px}
+  .stat-card{min-height:150px;padding:20px;border-radius:21px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 92%,var(--secondary)));box-shadow:var(--shadow)}
+  .stat-card .icon{width:44px;height:44px;margin-bottom:14px;border:1px solid color-mix(in srgb,var(--secondary) 16%,transparent);border-radius:15px}
+  .stat-card .label{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
+  .stat-card .value{margin-top:5px;font-size:clamp(1.05rem,1.7vw,1.42rem)}
+  .section-title{display:flex;align-items:center;gap:12px;margin:40px 0 16px;font-size:1.4rem;letter-spacing:-.05em}
+  .section-title:after{height:1px}
+  .section-title>i{flex:none;width:38px;height:38px;border:1px solid color-mix(in srgb,var(--secondary) 18%,var(--border));border-radius:13px;background:linear-gradient(145deg,color-mix(in srgb,var(--secondary) 13%,var(--surface)),var(--surface))}
+  .content>.card,.sdh-panel{border:1px solid color-mix(in srgb,var(--border) 86%,var(--secondary));border-radius:24px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 98%,var(--secondary)),var(--surface));box-shadow:var(--shadow)}
+  .content>.card{padding:22px}
+  .filters{gap:17px}
+  .filter-item label{font-size:.76rem;font-weight:750;text-transform:uppercase;letter-spacing:.045em}
+  input[type=text],select,input[type=number]{border-radius:13px!important;background:var(--surface-2)!important}
+  .btn{min-height:44px;border-radius:13px}
+  .btn-primary{background:linear-gradient(115deg,var(--secondary),color-mix(in srgb,var(--secondary) 55%,#7768ec),var(--accent));box-shadow:0 10px 24px color-mix(in srgb,var(--secondary) 25%,transparent)}
+  .laptop-card,.college-card,.job-card{border:1px solid var(--border);border-radius:22px;background:linear-gradient(158deg,var(--surface),color-mix(in srgb,var(--surface) 94%,var(--secondary)));box-shadow:var(--shadow)}
+  .laptop-card:before,.college-card:before,.job-card:before{height:4px;opacity:1;background:linear-gradient(90deg,var(--secondary),var(--accent),color-mix(in srgb,var(--secondary) 55%,#f0ab54));background-size:200% 100%}
+  .laptop-card:hover,.college-card:hover,.job-card:hover{border-color:color-mix(in srgb,var(--secondary) 42%,var(--border));box-shadow:0 24px 54px color-mix(in srgb,var(--secondary) 13%,transparent)}
+  .best-card{border:1px solid color-mix(in srgb,var(--secondary) 25%,var(--border));border-radius:22px!important;background:linear-gradient(115deg,color-mix(in srgb,var(--secondary) 9%,var(--surface)),color-mix(in srgb,var(--accent) 7%,var(--surface)))}
+  .compare-wrapper{border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}
+  .compare-table th{background:var(--surface-2)}
+  .sdh-panel{padding:clamp(19px,2.2vw,30px)}
+  .sdh-panel h2{font-size:1.22rem;letter-spacing:-.045em}
+  .sdh-grid{gap:14px}
+  .sdh-stat{border-radius:17px;background:linear-gradient(145deg,var(--surface-2),color-mix(in srgb,var(--surface-2) 85%,var(--secondary)))}
+  .sdh-tools{gap:13px}
+  .sdh-facet-dropdown{z-index:1}
+  .sdh-panel:has(.sdh-facet-dropdown[open]){z-index:40;transform:none}
+  .sdh-facet-dropdown[open]{z-index:45}
+  .sdh-facet-menu{border-radius:0 0 14px 14px;box-shadow:0 18px 38px rgba(13,24,54,.18)}
+  .sdh-row{border:1px solid var(--border);border-radius:15px;background:color-mix(in srgb,var(--surface-2) 82%,var(--surface))}
+  .sdh-analysis article{border-radius:17px;background:linear-gradient(145deg,var(--surface-2),var(--surface))}
+  .sdh-whatif-stat{border-radius:16px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 92%,var(--secondary)))}
+  .sdh-visual-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+  .sdh-visual-grid>div{min-width:0;padding:18px;border:1px solid var(--border);border-radius:19px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 96%,var(--secondary)));box-shadow:0 8px 24px rgba(27,39,76,.035)}
+  .sdh-visual-grid h3{margin:0 0 8px;font-size:1rem}
+  .sdh-chart-wrap,.chart-container{position:relative;min-width:0;max-width:100%;overflow:hidden;border:1px solid color-mix(in srgb,var(--border) 70%,var(--secondary));border-radius:17px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 86%,var(--secondary)),var(--surface-2))}
+  .sdh-chart-wrap canvas,.chart-container canvas{display:block!important;width:100%!important;max-width:100%!important}
+  #chartsSection>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px}
+  #chartsSection>.grid>.card{min-width:0;overflow:hidden;padding:18px;border:1px solid var(--border);border-radius:22px;background:var(--surface);box-shadow:var(--shadow)}
+  #chartsSection>.grid>.card:last-child{grid-column:1/-1}
+  #chartsSection .chart-container{height:310px}
+  .sdh-panel--whatif .sdh-chart-wrap{min-width:0;max-width:100%;overflow:hidden;border-radius:18px}
+  #sdh-workspace-nav{top:82px;border:1px solid color-mix(in srgb,var(--border) 78%,var(--secondary));border-radius:17px;background:color-mix(in srgb,var(--surface) 88%,transparent);box-shadow:0 12px 32px rgba(25,38,78,.08)}
+  #sdh-workspace-nav a{border:1px solid transparent}
+  #sdh-workspace-nav a:hover,#sdh-workspace-nav a:focus-visible{border-color:color-mix(in srgb,var(--secondary) 18%,var(--border));border-radius:11px}
+  .empty-state{border-radius:22px!important;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface) 92%,var(--secondary)))}
+  footer{color:var(--text-muted)}
+  @media(max-width:1100px){.summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.content{padding-inline:26px}}
+  @media(max-width:768px){.sidebar{width:252px}.main{margin-left:0}.content{padding:20px 16px 64px}.content>header{min-height:240px;padding:30px 24px;border-radius:25px}.content>header h1{font-size:clamp(2.25rem,8vw,3.5rem)}.content>header:after{right:-150px;top:-150px}.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.stat-card{min-height:130px;padding:15px}.section-title{font-size:1.2rem;margin-top:30px}.content>.card{padding:16px}.sdh-panel{padding:18px}.sdh-visual-grid{grid-template-columns:1fr}#chartsSection>.grid{grid-template-columns:1fr!important}#chartsSection>.grid>.card:last-child{grid-column:auto}.sdh-chart-wrap{height:250px}.sdh-panel--whatif .sdh-chart-wrap{height:340px}#sdh-workspace-nav{top:68px}.sdh-panel:hover{transform:none}}
+  @media(max-width:420px){.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-card .value{font-size:1rem}.content>header h1:before{font-size:.55rem;letter-spacing:.14em}.sdh-actions .btn{flex:1;justify-content:center}}
+  @media(prefers-reduced-motion:reduce){.content>header:after{animation:none}}
+  @media(prefers-reduced-motion:reduce){.content>header,.stat-card,.laptop-card,.college-card,.job-card{animation:none!important}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body data-helper="job">
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><i class="fa-solid fa-brain"></i> Smart Decision Helper</div>
+    <nav class="nav-section">
+      <h4>Helpers</h4>
+      <a href="laptop-helper.html" class="nav-link"><i class="fa-solid fa-laptop"></i> Laptop Selection</a>
+      <a href="college-helper.html" class="nav-link"><i class="fa-solid fa-graduation-cap"></i> College Selection</a>
+      <a href="job-helper.html" class="nav-link active"><i class="fa-solid fa-briefcase"></i> Job Offer Comparison</a>
+      <h4 style="margin-top:14px;">About</h4>
+      <div style="padding:8px 12px;font-size:.8rem;color:var(--text-muted);line-height:1.5;">Compare job offers by salary, growth, work-life balance and work mode with live scores.</div>
+    </nav>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle menu"><i class="fa-solid fa-bars"></i></button>
+      <div class="page-title">Job Offer Comparison Helper</div>
+      <div class="actions"><button class="theme-toggle" id="themeToggle" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button></div>
+    </header>
+    <div class="content">
+      <header>
+        <h1>Job Offer Comparison Helper</h1>
+        <p>Compare job offers by salary, career growth, work-life balance, company rating and work mode. Add up to five offers to see live compatibility scores and a clear best recommendation.</p>
+        <p style="margin-top:6px;font-size:.78rem;color:var(--text-muted);"><i class="fa-solid fa-circle-info"></i> All job offer records are fictional sample data.</p>
+      </header>
+      <div class="grid summary-cards">
+        <div class="card stat-card"><div class="icon blue"><i class="fa-solid fa-briefcase"></i></div><div class="label">Total Offers</div><div class="value" id="statTotal">0</div></div>
+        <div class="card stat-card"><div class="icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div><div class="label">Highest Salary</div><div class="value" id="statHigh">0 LPA</div></div>
+        <div class="card stat-card"><div class="icon navy"><i class="fa-solid fa-scale-balanced"></i></div><div class="label">Average Salary</div><div class="value" id="statAvg">0 LPA</div></div>
+        <div class="card stat-card"><div class="icon orange"><i class="fa-solid fa-rocket"></i></div><div class="label">Best Growth</div><div class="value" id="statGrowth">-</div></div>
+        <div class="card stat-card"><div class="icon purple"><i class="fa-solid fa-layer-group"></i></div><div class="label">Selected</div><div class="value" id="statSelected">0 / 5</div></div>
+      </div>
+      <h2 class="section-title"><i class="fa-solid fa-sliders"></i> Preferences & Filters</h2>
+      <div class="card">
+        <div class="filters">
+          <div class="filter-item"><label for="search"><span>Search</span><span class="val" id="searchCount"></span></label><input type="text" id="search" placeholder="Search by company or role..." /></div>
+          <div class="filter-item"><label for="locFilter">Location</label><select id="locFilter"><option value="">All Locations</option></select></div>
+          <div class="filter-item"><label for="workModeFilter">Work Mode</label><select id="workModeFilter"><option value="">All Modes</option><option value="Remote">Remote</option><option value="Hybrid">Hybrid</option><option value="Office">Office</option></select></div>
+          <div class="filter-item"><label for="desiredSalary"><span>Desired Salary</span><span class="val" id="desiredSalaryVal">6 LPA</span></label><input type="range" id="desiredSalary" min="3" max="25" step="0.5" value="6" /></div>
+          <div class="filter-item"><label for="growth"><span>Career Growth Importance</span><span class="val" id="growthVal">5 / 10</span></label><input type="range" id="growth" min="1" max="10" step="1" value="5" /></div>
+          <div class="filter-item"><label for="wlb"><span>Work-Life Balance Importance</span><span class="val" id="wlbVal">5 / 10</span></label><input type="range" id="wlb" min="1" max="10" step="1" value="5" /></div>
+          <div class="filter-item"><label for="ratingPref"><span>Company Rating Importance</span><span class="val" id="ratingPrefVal">5 / 10</span></label><input type="range" id="ratingPref" min="1" max="10" step="1" value="5" /></div>
+          <div class="filter-item"><label for="prefWorkMode">Preferred Work Mode</label><select id="prefWorkMode"><option value="">No Preference</option><option value="Remote">Remote</option><option value="Hybrid">Hybrid</option><option value="Office">Office</option></select></div>
+          <div class="filter-item" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-ghost" id="resetBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button></div>
+        </div>
+      </div>
+      <h2 class="section-title"><i class="fa-solid fa-list"></i> Available Job Offers <span style="font-size:.85rem;color:var(--text-muted);font-weight:400;" id="listCount"></span></h2>
+      <div class="job-grid" id="jobGrid"></div>
+      <div class="empty-state" id="jobEmpty" style="display:none;"><i class="fa-solid fa-magnifying-glass"></i><h3>No job offers found</h3><p>Try adjusting your search or filters.</p></div>
+      <h2 class="section-title"><i class="fa-solid fa-code-compare"></i> Comparison & Ranking</h2>
+      <div id="comparisonSection">
+        <div class="empty-state"><i class="fa-solid fa-code-compare"></i><h3>No offers selected for comparison</h3><p>Click "Add to Comparison" on offers above to see them ranked here.</p></div>
+      </div>
+      <div id="chartsSection" style="display:none;">
+        <h2 class="section-title"><i class="fa-solid fa-chart-column"></i> Visualizations</h2>
+        <div class="grid" style="grid-template-columns:1fr 1fr;">
+          <div class="card"><h3 style="font-size:.95rem;margin-bottom:12px;">Salary Comparison (LPA)</h3><div class="chart-container"><canvas id="salaryChart"></canvas></div></div>
+          <div class="card"><h3 style="font-size:.95rem;margin-bottom:12px;">Career Growth Score</h3><div class="chart-container"><canvas id="growthChart"></canvas></div></div>
+        </div>
+        <div class="card" style="margin-top:18px;"><h3 style="font-size:.95rem;margin-bottom:12px;">Compatibility Score Ranking</h3><div class="chart-container"><canvas id="scoreChart"></canvas></div></div>
+      </div>
+      <footer>Smart Decision Helper &middot; Job Offer Comparison &middot; Built with HTML, CSS &amp; Vanilla JavaScript &middot; Sample data for demonstration.</footer>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  "use strict";
+  const JOBS = [
+    { id:1, company:"TechNova",      role:"Software Developer",    salary:6.5,  location:"Coimbatore", workMode:"Hybrid", workLifeBalance:8, companyRating:4.2, careerGrowth:9, benefits:["Health Insurance","Learning Budget"], experience:"Fresher" },
+    { id:2, company:"CloudPeak",     role:"Frontend Engineer",     salary:8.0,  location:"Chennai",    workMode:"Office", workLifeBalance:6, companyRating:4.5, careerGrowth:7, benefits:["Health Insurance","PF","Relocation"], experience:"1-2 yrs" },
+    { id:3, company:"DataMind",      role:"Data Analyst",          salary:5.5,  location:"Remote",     workMode:"Remote", workLifeBalance:9, companyRating:4.1, careerGrowth:8, benefits:["Flexible Hours","Learning Budget"], experience:"Fresher" },
+    { id:4, company:"FinEdge",       role:"Backend Developer",     salary:9.5,  location:"Bengaluru",  workMode:"Hybrid", workLifeBalance:7, companyRating:4.3, careerGrowth:8, benefits:["Health Insurance","PF","Stock Options"], experience:"2-3 yrs" },
+    { id:5, company:"PixelCraft",    role:"UI/UX Designer",        salary:5.0,  location:"Remote",     workMode:"Remote", workLifeBalance:9, companyRating:4.0, careerGrowth:7, benefits:["Flexible Hours","Equipment Allowance"], experience:"Fresher" },
+    { id:6, company:"SysCore",       role:"DevOps Engineer",       salary:11.0, location:"Bengaluru",  workMode:"Office", workLifeBalance:5, companyRating:4.4, careerGrowth:8, benefits:["Health Insurance","PF","Onsite"], experience:"2-3 yrs" },
+    { id:7, company:"GreenLeaf",     role:"Full Stack Developer",  salary:7.0,  location:"Coimbatore", workMode:"Hybrid", workLifeBalance:8, companyRating:4.2, careerGrowth:9, benefits:["Health Insurance","Learning Budget","WFH Setup"], experience:"1-2 yrs" },
+    { id:8, company:"QuantumBit",    role:"ML Engineer",           salary:14.0, location:"Bengaluru",  workMode:"Hybrid", workLifeBalance:6, companyRating:4.6, careerGrowth:9, benefits:["Health Insurance","Stock Options","Research Budget"], experience:"3+ yrs" },
+    { id:9, company:"BrightPath",    role:"QA Engineer",           salary:4.5,  location:"Madurai",    workMode:"Remote", workLifeBalance:9, companyRating:3.9, careerGrowth:6, benefits:["Flexible Hours"], experience:"Fresher" },
+    { id:10,company:"NexaSoft",      role:"Product Manager",       salary:16.0, location:"Chennai",    workMode:"Office", workLifeBalance:6, companyRating:4.5, careerGrowth:9, benefits:["Health Insurance","PF","Stock Options","Car Lease"], experience:"3+ yrs" },
+    { id:11,company:"AgileWave",     role:"Mobile Developer",      salary:7.5,  location:"Remote",     workMode:"Remote", workLifeBalance:8, companyRating:4.1, careerGrowth:8, benefits:["Flexible Hours","Learning Budget","Equipment"], experience:"1-2 yrs" },
+    { id:12,company:"CoreStack",     role:"Cloud Architect",       salary:20.0, location:"Bengaluru",  workMode:"Hybrid", workLifeBalance:7, companyRating:4.7, careerGrowth:10,benefits:["Health Insurance","Stock Options","Conference Budget"], experience:"5+ yrs" },
+    { id:13,company:"Orbit Systems",  role:"Cybersecurity Analyst", salary:8.5,  location:"Chennai",    workMode:"Hybrid", workLifeBalance:8, companyRating:4.3, careerGrowth:9, benefits:["Health Insurance","Learning Budget","Certification Support"], experience:"1-2 yrs" },
+    { id:14,company:"Maple Robotics", role:"Robotics Engineer",     salary:10.0, location:"Coimbatore", workMode:"Office", workLifeBalance:7, companyRating:4.4, careerGrowth:9, benefits:["Health Insurance","Research Budget","Transport"], experience:"2-3 yrs" },
+    { id:15,company:"Northstar Labs", role:"Data Engineer",         salary:12.5, location:"Remote",     workMode:"Remote", workLifeBalance:8, companyRating:4.6, careerGrowth:9, benefits:["Flexible Hours","Health Insurance","Stock Options"], experience:"2-3 yrs" },
+    { id:16,company:"CedarWorks",     role:"Technical Writer",      salary:6.0,  location:"Madurai",    workMode:"Hybrid", workLifeBalance:9, companyRating:4.1, careerGrowth:7, benefits:["Flexible Hours","Learning Budget"], experience:"Fresher" },
+    { id:17,company:"BluePeak Energy",role:"Cloud Support Engineer",salary:7.5,  location:"Bengaluru",  workMode:"Office", workLifeBalance:7, companyRating:4.2, careerGrowth:8, benefits:["Health Insurance","PF","On-call Allowance"], experience:"1-2 yrs" },
+    { id:18,company:"CopperTree Apps",role:"Android Developer",     salary:9.0,  location:"Remote",     workMode:"Remote", workLifeBalance:8, companyRating:4.4, careerGrowth:8, benefits:["Flexible Hours","Equipment Allowance","Learning Budget"], experience:"2-3 yrs" },
+  ];
+
+  const DEFAULTS = { search:"", location:"", workMode:"", desiredSalary:6, growth:5, wlb:5, ratingPref:5, prefWorkMode:"" };
+  let prefs = { ...DEFAULTS };
+  let selectedIds = [];
+  let filteredJobs = [...JOBS];
+  let salaryChart=null, growthChart=null, scoreChart=null;
+  const MAX_COMPARE = 5;
+  let WEIGHTS = { salary:0.30, growth:0.25, wlb:0.20, rating:0.15, modeLoc:0.10 };
+  const STORAGE_KEY = "sdh_job_selected";
+  const $ = id => document.getElementById(id);
+
+  function saveSelected(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedIds)); }catch(e){} }
+  function loadSelected(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s){ const a=JSON.parse(s); if(Array.isArray(a)) selectedIds=a.slice(0,MAX_COMPARE);} if(!selectedIds.length&&localStorage.getItem("sdh_job_demo_seeded")===null){selectedIds=JOBS.slice(0,3).map((job)=>job.id);saveSelected();} }catch(e){} }
+
+  function initTheme(){ try{ const t=localStorage.getItem("sdh_theme"); if(t) document.documentElement.setAttribute("data-theme",t); updateThemeIcon(); }catch(e){} }
+  function toggleTheme(){ const c=document.documentElement.getAttribute("data-theme")||"light"; const n=c==="light"?"dark":"light"; document.documentElement.setAttribute("data-theme",n); try{localStorage.setItem("sdh_theme",n);}catch(e){} updateThemeIcon(); renderCharts(); }
+  function updateThemeIcon(){ const d=document.documentElement.getAttribute("data-theme")==="dark"; $("themeToggle").innerHTML = d?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>'; $("themeToggle").setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode"); $("themeToggle").title=d?"Switch to light mode":"Switch to dark mode"; }
+
+  let toastTimer=null;
+  function toast(msg,type){ const el=$("toast"); el.textContent=msg; el.className="toast show "+(type||""); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{el.className="toast "+(type||"");},2600); }
+
+  function computeScore(job, p){
+    // Salary suitability vs desired salary
+    let salaryScore;
+    if(job.salary >= p.desiredSalary){
+      const over = job.salary - p.desiredSalary;
+      salaryScore = Math.min(100, 80 + (over / p.desiredSalary) * 40);
+    } else {
+      const ratio = job.salary / Math.max(0.1, p.desiredSalary);
+      salaryScore = ratio * 75;
+    }
+    const growthNorm = (job.careerGrowth/10)*100;
+    const wlbNorm = (job.workLifeBalance/10)*100;
+    const ratingNorm = (job.companyRating/5)*100;
+    let modeLocScore = 60;
+    if(p.prefWorkMode && job.workMode === p.prefWorkMode) modeLocScore = 100;
+    else if(!p.prefWorkMode) modeLocScore = 70;
+    else modeLocScore = 40;
+
+    let score = salaryScore*WEIGHTS.salary + growthNorm*WEIGHTS.growth + wlbNorm*WEIGHTS.wlb
+              + ratingNorm*WEIGHTS.rating + modeLocScore*WEIGHTS.modeLoc;
+    score = Math.max(0, Math.min(100, score));
+    return Math.round(score*10)/10;
+  }
+
+  function reasons(job, p){
+    const r = [];
+    if(job.salary >= p.desiredSalary) r.push("Salary "+job.salary+" LPA meets your "+p.desiredSalary+" LPA target");
+    else r.push("Salary "+job.salary+" LPA below your "+p.desiredSalary+" LPA target");
+    if(p.prefWorkMode && job.workMode === p.prefWorkMode) r.push("Work mode ("+job.workMode+") matches your preference");
+    else if(p.prefWorkMode) r.push("Work mode ("+job.workMode+") doesn't match your preference ("+p.prefWorkMode+")");
+    if(job.careerGrowth >= 8) r.push("Strong career growth ("+job.careerGrowth+"/10)");
+    if(job.workLifeBalance >= 8) r.push("Good work-life balance ("+job.workLifeBalance+"/10)");
+    if(job.companyRating >= 4.5) r.push("Highly rated company ("+job.companyRating+"/5)");
+    if(job.benefits.length >= 3) r.push("Rich benefits package");
+    return r.length ? r : ["Basic match for your preferences"];
+  }
+
+  function getScoredSelected(){
+    return selectedIds.map(id => {
+      const j = JOBS.find(x=>x.id===id);
+      if(!j) return null;
+      const salaryMatch = j.salary >= prefs.desiredSalary;
+      const modeMatch = !prefs.prefWorkMode || j.workMode === prefs.prefWorkMode;
+      return { ...j, score: computeScore(j, prefs), salaryMatch, modeMatch, reasons: reasons(j, prefs) };
+    }).filter(Boolean).sort((a,b)=> b.score - a.score);
+  }
+
+  function applyFilters(){
+    const s = prefs.search.toLowerCase().trim();
+    filteredJobs = JOBS.filter(j => {
+      if(prefs.location && j.location !== prefs.location) return false;
+      if(prefs.workMode && j.workMode !== prefs.workMode) return false;
+      if(s && !(j.company.toLowerCase().includes(s) || j.role.toLowerCase().includes(s))) return false;
+      return true;
+    });
+    renderList();
+    $("searchCount").textContent = filteredJobs.length === JOBS.length ? "" : (filteredJobs.length+" match");
+  }
+
+  function renderSummary(){
+    $("statTotal").textContent = JOBS.length;
+    const maxSal = Math.max(...JOBS.map(j=>j.salary));
+    $("statHigh").textContent = maxSal+" LPA";
+    const avg = (JOBS.reduce((s,j)=>s+j.salary,0)/JOBS.length).toFixed(1);
+    $("statAvg").textContent = avg+" LPA";
+    const bestG = JOBS.reduce((a,b)=> a.careerGrowth>b.careerGrowth?a:b);
+    $("statGrowth").textContent = bestG.company;
+    $("statSelected").textContent = selectedIds.length+" / "+MAX_COMPARE;
+  }
+
+  function renderList(){
+    const grid = $("jobGrid");
+    $("jobEmpty").style.display = filteredJobs.length ? "none":"block";
+    $("listCount").textContent = "("+filteredJobs.length+")";
+    grid.innerHTML = "";
+    filteredJobs.forEach(j => {
+      const isSelected = selectedIds.includes(j.id);
+      const score = computeScore(j, prefs);
+      const salaryMatch = j.salary >= prefs.desiredSalary;
+      const modeMatch = !prefs.prefWorkMode || j.workMode === prefs.prefWorkMode;
+      const hasIssue = !salaryMatch || !modeMatch;
+      let badgeColor = hasIssue ? 'rgba(245,158,11,.12)':'rgba(22,163,74,.12)';
+      let badgeText = hasIssue ? 'var(--warning)':'var(--success)';
+      let badgeLabel = !salaryMatch ? '(Below Salary)' : (!modeMatch ? '(Mode Mismatch)' : '');
+      const card = document.createElement("div");
+      card.className = "job-card";
+      const modeIcon = j.workMode === "Remote" ? "fa-house" : (j.workMode === "Hybrid" ? "fa-laptop-house" : "fa-building");
+      card.innerHTML = `
+        <div class="head"><div><div class="company">${j.company}</div><div class="role">${j.role}</div></div><div class="salary">${j.salary} LPA</div></div>
+        <div class="specs">
+          <span class="chip"><i class="fa-solid fa-location-dot"></i> ${j.location}</span>
+          <span class="chip"><i class="fa-solid ${modeIcon}"></i> ${j.workMode}</span>
+          <span class="chip"><i class="fa-solid fa-rocket"></i> Growth ${j.careerGrowth}/10</span>
+          <span class="chip"><i class="fa-solid fa-scale-balanced"></i> WLB ${j.workLifeBalance}/10</span>
+          <span class="chip"><i class="fa-solid fa-user-clock"></i> ${j.experience}</span>
+        </div>
+        <div class="benefits">${j.benefits.map(b=>'<span class="benefit-pill">'+b+'</span>').join("")}</div>
+        <div class="rating"><i class="fa-solid fa-star"></i> ${j.companyRating} / 5</div>
+        <div class="score-badge" style="background:${badgeColor};color:${badgeText};">Score ${score} ${badgeLabel}</div>
+        <button class="add-btn ${isSelected?'added':''}" data-id="${j.id}">${isSelected?'<i class="fa-solid fa-check"></i> Added':'<i class="fa-solid fa-plus"></i> Add to Comparison'}</button>`;
+      grid.appendChild(card);
+    });
+    grid.querySelectorAll(".add-btn").forEach(btn => btn.addEventListener("click", ()=> toggleSelect(parseInt(btn.dataset.id,10))));
+  }
+
+  function toggleSelect(id){
+    const idx = selectedIds.indexOf(id);
+    if(idx >= 0){ selectedIds.splice(idx,1); saveSelected(); toast("Removed from comparison","warn"); updateAll(); }
+    else {
+      if(selectedIds.length >= MAX_COMPARE){ toast("You can compare up to "+MAX_COMPARE+" offers at a time","error"); return; }
+      selectedIds.push(id); saveSelected();
+      const j = JOBS.find(x=>x.id===id);
+      toast("Added "+j.company+" to comparison");
+      updateAll();
+    }
+  }
+
+  function renderComparison(){
+    const section = $("comparisonSection");
+    const scored = getScoredSelected();
+    if(scored.length === 0){
+      section.innerHTML = '<div class="empty-state"><i class="fa-solid fa-code-compare"></i><h3>No offers selected for comparison</h3><p>Click "Add to Comparison" on offers above to see them ranked here.</p></div>';
+      $("chartsSection").style.display = "none";
+      return;
+    }
+    $("chartsSection").style.display = "block";
+    const best = scored[0];
+    let bestCardHtml = `
+      <div class="best-card" style="margin-bottom:18px;">
+        <div class="crown"><i class="fa-solid fa-crown"></i></div>
+        <div class="info"><h3>Best Pick: ${best.company} - ${best.role}</h3><p>${best.reasons.join(" &middot; ")}</p></div>
+        <div class="score"><div class="num">${best.score}</div><div style="font-size:.75rem;color:var(--text-muted);">Score / 100</div></div>
+      </div>`;
+    let tableHtml = '<div class="card"><div class="compare-wrapper"><table class="compare-table"><thead><tr><th>Rank</th><th>Company</th><th>Role</th><th>Salary</th><th>Location</th><th>Mode</th><th>Growth</th><th>WLB</th><th>Rating</th><th>Benefits</th><th>Score</th><th></th></tr></thead><tbody>';
+    scored.forEach((j,i) => {
+      const isBest = i===0;
+      tableHtml += `<tr class="${isBest?'best-row':''}">
+        <td>${isBest?'<i class="fa-solid fa-crown" style="color:var(--warning)"></i> #1':'#'+(i+1)}</td>
+        <td><strong>${j.company}</strong></td>
+        <td>${j.role}</td>
+        <td>${j.salary} LPA ${j.salaryMatch?'<span class="badge-flag ok">OK</span>':'<span class="badge-flag over">Below</span>'}</td>
+        <td>${j.location}</td>
+        <td>${j.workMode} ${!j.modeMatch?'<span class="badge-flag mismatch">Mismatch</span>':''}</td>
+        <td>${j.careerGrowth}/10</td>
+        <td>${j.workLifeBalance}/10</td>
+        <td><i class="fa-solid fa-star" style="color:var(--warning)"></i> ${j.companyRating}</td>
+        <td style="font-size:.8rem;">${j.benefits.join(", ")}</td>
+        <td><strong style="color:var(--success)">${j.score}</strong></td>
+        <td><span class="remove-link" data-id="${j.id}"><i class="fa-solid fa-xmark"></i> Remove</span></td>
+      </tr>`;
+    });
+    tableHtml += '</tbody></table></div></div>';
+    section.innerHTML = bestCardHtml + tableHtml;
+    section.querySelectorAll(".remove-link").forEach(el => el.addEventListener("click", ()=> toggleSelect(parseInt(el.dataset.id,10))));
+    renderCharts();
+  }
+
+  function renderCharts(){
+    const scored = getScoredSelected();
+    if(scored.length === 0) return;
+    const labels = scored.map(j => j.company);
+    const isDark = document.documentElement.getAttribute("data-theme")==="dark";
+    const gridColor = isDark ? "rgba(255,255,255,.08)":"rgba(0,0,0,.06)";
+    const tickColor = isDark ? "#94A3B8":"#64748B";
+    if(salaryChart) salaryChart.destroy();
+    salaryChart = new Chart($("salaryChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Salary (LPA)", data:scored.map(j=>j.salary), backgroundColor:scored.map(j=>j.salaryMatch?"rgba(37,99,235,.7)":"rgba(245,158,11,.7)"), borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{ticks:{color:tickColor},grid:{color:gridColor}},y:{ticks:{color:tickColor},grid:{color:gridColor}}} }
+    });
+    if(growthChart) growthChart.destroy();
+    growthChart = new Chart($("growthChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Growth /10", data:scored.map(j=>j.careerGrowth), backgroundColor:"rgba(124,58,237,.7)", borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{ticks:{color:tickColor},grid:{color:gridColor}},y:{max:10,ticks:{color:tickColor},grid:{color:gridColor}}} }
+    });
+    if(scoreChart) scoreChart.destroy();
+    scoreChart = new Chart($("scoreChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Score /100", data:scored.map(j=>j.score), backgroundColor:scored.map((j,i)=>i===0?"rgba(22,163,74,.8)":"rgba(37,99,235,.6)"), borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y", plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{max:100,ticks:{color:tickColor},grid:{color:gridColor}},y:{ticks:{color:tickColor},grid:{color:gridColor}}} }
+    });
+  }
+
+  function updateAll(){ renderSummary(); applyFilters(); renderComparison(); }
+
+  function resetPrefs(){
+    prefs = { ...DEFAULTS };
+    $("search").value=""; $("locFilter").value=""; $("workModeFilter").value=""; $("prefWorkMode").value="";
+    $("desiredSalary").value=DEFAULTS.desiredSalary; $("growth").value=DEFAULTS.growth;
+    $("wlb").value=DEFAULTS.wlb; $("ratingPref").value=DEFAULTS.ratingPref;
+    updateLabels(); updateAll(); toast("Preferences reset to defaults");
+  }
+  function updateLabels(){
+    $("desiredSalaryVal").textContent = parseFloat($("desiredSalary").value)+" LPA";
+    $("growthVal").textContent = $("growth").value+" / 10";
+    $("wlbVal").textContent = $("wlb").value+" / 10";
+    $("ratingPrefVal").textContent = $("ratingPref").value+" / 10";
+  }
+
+  function bindEvents(){
+    $("search").addEventListener("input", e=>{ prefs.search=e.target.value; applyFilters(); });
+    $("locFilter").addEventListener("change", e=>{ prefs.location=e.target.value; applyFilters(); });
+    $("workModeFilter").addEventListener("change", e=>{ prefs.workMode=e.target.value; applyFilters(); });
+    $("desiredSalary").addEventListener("input", e=>{ prefs.desiredSalary=parseFloat(e.target.value); updateLabels(); updateAll(); });
+    $("growth").addEventListener("input", e=>{ prefs.growth=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("wlb").addEventListener("input", e=>{ prefs.wlb=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("ratingPref").addEventListener("input", e=>{ prefs.ratingPref=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("prefWorkMode").addEventListener("change", e=>{ prefs.prefWorkMode=e.target.value; updateAll(); });
+    $("resetBtn").addEventListener("click", resetPrefs);
+    $("themeToggle").addEventListener("click", toggleTheme);
+    $("menuBtn").addEventListener("click", ()=>{ $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); });
+    $("overlay").addEventListener("click", ()=>{ $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); });
+  }
+
+  function init(){
+    const locations = [...new Set(JOBS.map(j=>j.location))].sort();
+    locations.forEach(loc => { const o=document.createElement("option"); o.value=loc; o.textContent=loc; $("locFilter").appendChild(o); });
+    initTheme(); loadSelected(); bindEvents(); updateLabels(); updateAll();
+  }
+  window.SDH = {
+    kind:"Job",key:"job",label:"Offers",options:JOBS,weights:()=>({...WEIGHTS}),
+    selected:()=>[...selectedIds],prefs:()=>({...prefs}),update:updateAll,notify:toast,
+    displayName:j=>j.company+" - "+j.role,price:j=>j.salary,rating:j=>j.companyRating,
+    facets:j=>[j.location,j.workMode],facetNames:["Location","Work mode"],
+    eligible:(j,p)=>j.salary>=p.desiredSalary&&(!p.prefWorkMode||j.workMode===p.prefWorkMode),
+    alerts:(j,p)=>[
+      ...(j.salary<p.desiredSalary?["Salary "+j.salary+" LPA is below your "+p.desiredSalary+" LPA target"]:[]),
+      ...(p.prefWorkMode&&j.workMode!==p.prefWorkMode?["Work mode "+j.workMode+" does not match your "+p.prefWorkMode+" preference"]:[])
+    ],
+    factors:(j,p)=>{
+      const salary=j.salary>=p.desiredSalary?Math.min(100,80+(j.salary-p.desiredSalary)/Math.max(.1,p.desiredSalary)*40):j.salary/Math.max(.1,p.desiredSalary)*75;
+      return [
+        {key:"salary",name:"Salary",score:salary},
+        {key:"growth",name:"Career growth",score:j.careerGrowth*10},
+        {key:"wlb",name:"Work-life balance",score:j.workLifeBalance*10},
+        {key:"rating",name:"Company rating",score:j.companyRating/5*100},
+        {key:"modeLoc",name:"Work mode",score:!p.prefWorkMode?70:j.workMode===p.prefWorkMode?100:40}
+      ];
+    },
+    setWeights:w=>{WEIGHTS={...w};updateAll();},
+    setState:s=>{
+      selectedIds=s.selected.filter(id=>JOBS.some(j=>j.id===id)).slice(0,MAX_COMPARE);
+      prefs={...prefs,...s.prefs};
+      $("search").value=prefs.search||"";$("locFilter").value=prefs.location||"";
+      $("workModeFilter").value=prefs.workMode||"";$("desiredSalary").value=prefs.desiredSalary;
+      $("growth").value=prefs.growth;$("wlb").value=prefs.wlb;$("ratingPref").value=prefs.ratingPref;
+      $("prefWorkMode").value=prefs.prefWorkMode||"";
+      saveSelected();updateLabels();updateAll();
+    },
+    getSnapshot:()=>({selected:[...selectedIds],prefs:{...prefs},weights:{...WEIGHTS}})
+  };
+  init();
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  const app = window.SDH;
+  if (!app) return;
+  const $ = (id) => document.getElementById(id);
+  const esc = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
+  const key = "sdh_" + app.key + "_";
+  const defaults = app.weights();
+  const state = { filters: [], min: "", max: "", sort: "score", previous: null, chart: null, radar: null, pie: null, before: null, favorites: new Set(), onlyFavorites: false, listView: false };
+  const favoriteKey=key+"favorites";
+  const scenario={field:"desiredSalary",label:"Desired salary",min:3,max:25,step:0.5,format:(value)=>`${Number(value).toFixed(1)} LPA`};
+  const scenarioDefault=Number(app.prefs()[scenario.field]);
+  let timer;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .sdh-panel{margin:18px 0;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .sdh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    .sdh-stat{padding:14px;background:var(--surface-2);border-radius:10px}.sdh-stat strong{display:block;font-size:1.15rem;overflow-wrap:anywhere}
+    .sdh-tools{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;align-items:end}
+    .sdh-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+    .sdh-tools>label,.sdh-weight-grid label{display:flex;min-width:0;flex-direction:column;gap:7px;font-size:.82rem;font-weight:600;color:var(--text-muted)}
+    .sdh-tools input,.sdh-tools select,.sdh-weight-grid input{box-sizing:border-box;width:100%;min-width:0;min-height:42px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font:inherit}
+    .sdh-facet-dropdown{position:relative;min-width:0;align-self:end;color:var(--text)}
+    .sdh-facet-dropdown[open]{z-index:21}
+    .sdh-facet-dropdown summary{display:flex;min-height:42px;align-items:center;justify-content:space-between;gap:8px;box-sizing:border-box;padding:8px 11px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text-muted);font-size:.78rem;font-weight:700;cursor:pointer;list-style:none}
+    .sdh-facet-dropdown summary::-webkit-details-marker{display:none}
+    .sdh-facet-dropdown summary:after{content:"";width:8px;height:8px;flex:none;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s}
+    .sdh-facet-dropdown[open] summary{border-color:var(--secondary);border-radius:10px 10px 0 0;color:var(--secondary)}
+    .sdh-facet-dropdown[open] summary:after{transform:rotate(225deg) translate(-2px,-1px)}
+    .sdh-facet-dropdown summary:focus-visible{outline:3px solid color-mix(in srgb,var(--secondary) 30%,transparent);outline-offset:2px}
+    .sdh-facet-value{overflow:hidden;color:var(--text);font-size:.76rem;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+    .sdh-facet-dropdown.has-selection summary{border-color:color-mix(in srgb,var(--secondary) 50%,var(--border))}
+    .sdh-facet-menu{position:absolute;z-index:20;top:100%;left:0;right:0;max-height:230px;overflow:auto;padding:7px;border:1px solid var(--secondary);border-top:0;border-radius:0 0 11px 11px;background:var(--surface);box-shadow:var(--shadow-lg)}
+    .sdh-facet-option{display:flex;min-height:36px;align-items:center;gap:9px;padding:5px 8px;border-radius:7px;color:var(--text);font-size:.8rem;cursor:pointer}
+    .sdh-facet-option:hover{background:var(--surface-2)}
+    .sdh-tools .sdh-facet-option input[type=checkbox]{width:16px;min-width:16px;min-height:16px;height:16px;margin:0;padding:0;accent-color:var(--secondary)}
+    .sdh-tools #sdh-clear-filters{width:100%;min-height:42px;align-self:end}
+    .sdh-weight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:14px;margin:16px 0}
+    .sdh-total{font-weight:700;margin:8px 0}.sdh-total.invalid{color:var(--error)}
+    .sdh-match{height:7px;min-width:100px;margin:5px 0;background:var(--surface-2);border-radius:8px;overflow:hidden}.sdh-match span{display:block;height:100%;background:linear-gradient(90deg,var(--secondary),var(--accent))}
+    .sdh-meta{font-size:.82rem;color:var(--text-muted);line-height:1.55;border-top:1px solid var(--border);padding-top:8px}
+    .sdh-alert{color:var(--error);font-weight:600}.sdh-good{color:var(--success)}.sdh-analysis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:12px 0}
+    .sdh-analysis article{padding:12px;border:1px solid var(--border);border-radius:9px}.sdh-analysis ul{padding-left:18px;font-size:.84rem}
+    .sdh-actions{margin:12px 0}.sdh-insight{line-height:1.6}.sdh-list{display:grid;gap:8px;margin-top:12px}.sdh-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;background:var(--surface-2);border-radius:8px}
+    .sdh-chart-wrap{height:260px;position:relative;margin:10px 0}.sdh-empty{color:var(--text-muted);padding:16px 0}
+    .sdh-panel--whatif{overflow:hidden;border-color:color-mix(in srgb,var(--secondary) 34%,var(--border));background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 92%,var(--secondary)),var(--surface))}
+    .sdh-panel--whatif .sdh-chart-wrap{height:390px;margin:16px 0 0;padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+    .sdh-whatif-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+    .sdh-whatif-stat{min-width:0;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:var(--surface);box-shadow:var(--shadow)}
+    .sdh-whatif-stat span{display:block;color:var(--text-muted);font-size:.75rem;font-weight:700}
+    .sdh-whatif-stat strong{display:block;margin-top:4px;color:var(--text);font-size:1.12rem;font-variant-numeric:tabular-nums}
+    .sdh-whatif-stat.is-positive strong{color:var(--success)}.sdh-whatif-stat.is-negative strong{color:var(--error)}
+    .sdh-whatif-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;color:var(--text-muted);font-size:.78rem}
+    .sdh-whatif-legend span{display:inline-flex;align-items:center;gap:7px}.sdh-whatif-legend i{width:9px;height:9px;border-radius:50%;background:#2563eb}
+    .sdh-whatif-legend .previous i{background:#a78bfa}
+    .sdh-scenario{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:14px 0;padding:14px 16px;border:1px solid var(--border);border-radius:15px;background:var(--surface)}
+    .sdh-scenario label{grid-column:1;grid-row:1/3;display:flex;flex-direction:column;gap:8px;color:var(--text);font-size:.88rem;font-weight:750}
+    .sdh-scenario output{color:var(--secondary);font-size:1.08rem;font-weight:850;font-variant-numeric:tabular-nums}
+    .sdh-scenario input[type=range]{width:100%;margin:2px 0;accent-color:var(--secondary);cursor:ew-resize}
+    .sdh-scenario input[type=range]::-webkit-slider-thumb{width:20px;height:20px;border:3px solid var(--surface);border-radius:50%;background:var(--secondary);box-shadow:0 2px 8px #161d3940;-webkit-appearance:none;appearance:none}
+    .sdh-scenario input[type=range]::-moz-range-thumb{width:15px;height:15px;border:3px solid var(--surface);border-radius:50%;background:var(--secondary);box-shadow:0 2px 8px #161d3940}
+    .sdh-scenario input[type=range]:focus-visible{outline:3px solid color-mix(in srgb,var(--secondary) 35%,transparent);outline-offset:4px}
+    .sdh-scenario small{color:var(--text-muted);font-size:.74rem;font-weight:500}
+    .sdh-stat{transition:transform .2s ease,box-shadow .2s ease}.sdh-stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+    .sdh-visual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.sdh-visual-grid>div{min-width:0;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+    .sdh-visual-grid h3{margin:0;font-size:.95rem;color:var(--text)}
+    @media(max-width:1100px){.sdh-tools{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:768px){#chartsSection>.grid{grid-template-columns:1fr!important}.sdh-visual-grid{grid-template-columns:1fr}.content,.sdh-panel,.card{min-width:0;max-width:100%}}
+    .sdh-panel h2,.sdh-panel h3{margin-bottom:10px}.sdh-panel h2{font-size:1.1rem}.sdh-panel h3{font-size:.96rem}
+    @media(max-width:600px){.sdh-row{align-items:flex-start;flex-direction:column}.sdh-chart-wrap{height:220px}.sdh-weight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sdh-tools{grid-template-columns:1fr}.sdh-whatif-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sdh-panel--whatif .sdh-chart-wrap{height:360px;padding:6px}.sdh-scenario{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+
+  const content = document.querySelector(".content");
+  const head = content.querySelector(":scope > header");
+  const weightFields = Object.entries(defaults).map(([name, value]) =>
+    `<label title="Contribution of ${esc(name)} to the overall score">${esc(name)} (%)<input type="number" min="0" max="100" step="1" data-weight="${esc(name)}" value="${Math.round(value * 100)}" aria-label="${esc(name)} scoring weight in percent"></label>`
+  ).join("");
+  const facetFields = app.facetNames.map((name, index) =>
+    `<details class="sdh-facet-dropdown"><summary><span>${esc(name)} filters</span><span class="sdh-facet-value" data-facet-label="${index}">All</span></summary><div class="sdh-facet-menu" role="group" aria-label="Filter by ${esc(name)}">${[...new Set(app.options.map((item)=>app.facets(item)[index]))].sort().map((value) => `<label class="sdh-facet-option"><input type="checkbox" data-facet="${index}" value="${esc(value)}"><span>${esc(value)}</span></label>`).join("")}</div></details>`
+  ).join("");
+  head.insertAdjacentHTML("afterend", `
+    <section class="sdh-panel" aria-label="Personalized summary">
+      <h2>Your decision snapshot</h2><div class="sdh-grid">
+        <div class="sdh-stat">Total options<strong id="sdh-total">0</strong></div>
+        <div class="sdh-stat">Eligible options<strong id="sdh-eligible">0</strong></div>
+        <div class="sdh-stat">Best match<strong id="sdh-best">—</strong></div>
+        <div class="sdh-stat">Average match<strong id="sdh-average">—</strong></div>
+        <div class="sdh-stat">Saved comparisons<strong id="sdh-saved-count">0</strong></div>
+        <div class="sdh-stat">Saved options<strong id="sdh-favorites-count">0</strong></div>
+      </div>
+    </section>
+    <section class="sdh-panel"><h2>Scoring priorities</h2><p>Adjust factors to reflect what matters most. Weights must total exactly 100%.</p>
+      <div class="sdh-weight-grid">${weightFields}</div><div id="sdh-weight-total" class="sdh-total" aria-live="polite"></div>
+      <button class="btn btn-ghost" id="sdh-reset-weights" type="button">Restore default weights</button>
+    </section>
+    <section class="sdh-panel"><h2>Advanced filters and sort</h2><div class="sdh-tools">
+      <label>Minimum ${esc(app.kind==="Laptop"?"price":app.kind==="College"?"fees":"salary")}<input type="number" id="sdh-min" min="0" aria-label="Minimum value"></label>
+      <label>Maximum ${esc(app.kind==="Laptop"?"price":app.kind==="College"?"fees":"salary")}<input type="number" id="sdh-max" min="0" aria-label="Maximum value"></label>
+      ${facetFields}
+      <label>Sort by<select id="sdh-sort"><option value="score">Compatibility</option><option value="price">Price / fees / salary</option><option value="rating">Rating</option>${Object.entries(defaults).map(([k])=>`<option value="${esc(k)}">${esc(k)}</option>`).join("")}</select></label>
+      <button class="btn btn-ghost" id="sdh-clear-filters" type="button">Clear all filters</button>
+    </div></section>
+    <section class="sdh-panel"><h2>Compare, save and share</h2><div class="sdh-actions">
+      <label>Comparison name<input id="sdh-name" type="text" maxlength="60" placeholder="e.g. Job offer shortlist"></label>
+      <button class="btn btn-primary" id="sdh-save" type="button">Save comparison</button>
+      <button class="btn btn-ghost" id="sdh-csv" type="button">Download CSV</button>
+      <button class="btn btn-ghost" id="sdh-pdf" type="button">Export PDF</button>
+      <button class="btn btn-ghost" id="sdh-share" type="button">Share</button>
+      <button class="btn btn-danger" id="sdh-clear-data" type="button">Clear all saved data</button>
+    </div><div id="sdh-explanation" class="sdh-insight"></div></section>
+    <section class="sdh-panel sdh-panel--whatif"><h2>What-if ranking</h2><p>Drag the slider to test a different desired salary. Scores, rankings, and eligibility update as you explore.</p>
+      <div class="sdh-scenario"><label for="sdh-scenario-value">${esc(scenario.label)} <output id="sdh-scenario-output" for="sdh-scenario-value"></output><input id="sdh-scenario-value" type="range" min="${scenario.min}" max="${scenario.max}" step="${scenario.step}" value="${Number(app.prefs()[scenario.field])}" aria-label="Try a different ${esc(scenario.label.toLowerCase())}"></label><small>Current preference · updates all option scores</small><button class="btn btn-ghost btn-sm" id="sdh-scenario-reset" type="button">Reset scenario</button></div>
+      <div id="sdh-whatif-summary" class="sdh-whatif-summary" aria-live="polite"></div>
+      <div class="sdh-whatif-legend" aria-hidden="true"><span><i></i> Current score</span><span class="previous"><i></i> Previous score</span></div>
+      <div class="sdh-chart-wrap"><canvas id="sdh-before-chart" aria-label="Before and after ranking chart"></canvas></div>
+    </section>
+    <section class="sdh-panel"><h2>Factor and compatibility charts</h2><div class="sdh-visual-grid">
+      <div><h3>Factor comparison</h3><div class="sdh-chart-wrap"><canvas id="sdh-radar" aria-label="Factor comparison radar chart"></canvas></div></div>
+      <div><h3>Compatibility score share</h3><div class="sdh-chart-wrap"><canvas id="sdh-pie" aria-label="Pie chart showing compatibility scores for selected jobs"></canvas></div></div>
+    </div></section>
+    <section class="sdh-panel"><h2>Saved comparisons</h2><div id="sdh-saved-list" class="sdh-list"></div></section>
+    <section class="sdh-panel"><h2>Comparison history</h2><div id="sdh-history-list" class="sdh-list"></div></section>
+  `);
+
+  const sectionTitles=[...content.querySelectorAll(":scope > .section-title")];
+  const navTargets=[["Overview",head],["Preferences",sectionTitles[0]],["Options",sectionTitles[1]],["Compare",sectionTitles[2]],["Insights",$("chartsSection")],["Saved",$("sdh-saved-list").parentElement]];
+  navTargets.forEach(([label,target],index)=>{if(target&&!target.id)target.id="sdh-anchor-"+index;});
+  $("sdh-total").closest(".sdh-panel").insertAdjacentHTML("beforebegin",`<nav id="sdh-workspace-nav" aria-label="Page sections">${navTargets.map(([label,target])=>target?`<a href="#${target.id}">${label}</a>`:"").join("")}</nav>`);
+  const optionsGrid=document.querySelector(".laptop-grid,.college-grid,.job-grid");
+  if(optionsGrid)optionsGrid.insertAdjacentHTML("beforebegin",`<div class="sdh-favorites-bar"><strong id="sdh-favorites-label">Saved options: 0</strong><div><button class="btn btn-ghost btn-sm" type="button" id="sdh-only-favorites" aria-pressed="false">Show saved only</button> <button class="btn btn-ghost btn-sm" type="button" id="sdh-list-toggle" aria-pressed="false">List view</button></div></div>`);
+  function scored(ids = app.selected(), prefs = app.prefs()) {
+    return ids.map((id) => {
+      const item = app.options.find((option) => option.id === id);
+      if (!item) return null;
+      const factors = app.factors(item, prefs);
+      const score = Math.round(factors.reduce((sum, factor) => sum + factor.score * (app.weights()[factor.key] || 0), 0) * 10) / 10;
+      return { item, id, name: app.displayName(item), score, eligible: app.eligible(item, prefs), alerts: app.alerts(item, prefs), factors };
+    }).filter(Boolean).sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.score - a.score);
+  }
+  function rankAll(prefs = app.prefs()) {
+    return app.options.map((item) => ({ id:item.id,name:app.displayName(item),score:app.factors(item,prefs).reduce((sum,f)=>sum+f.score*(app.weights()[f.key]||0),0),eligible:app.eligible(item,prefs) }))
+      .sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.score-a.score);
+  }
+  function savedList(name) {
+    try { return JSON.parse(localStorage.getItem(key + name) || "[]"); }
+    catch (error) { app.notify("Could not read saved data: " + error.message, "error"); return []; }
+  }
+  function store(name, value) {
+    try { localStorage.setItem(key + name, JSON.stringify(value)); return true; }
+    catch (error) { app.notify("Could not save data: " + error.message, "error"); return false; }
+  }
+  function factors(item) { return app.factors(item, app.prefs()).map((f)=>({...f,score:Math.round(f.score*10)/10})); }
+  function htmlList(items) { return items.map((item)=>`<li>${esc(item)}</li>`).join(""); }
+  function refreshCards() {
+    document.querySelectorAll(".add-btn[data-id]").forEach((button) => {
+      const item=app.options.find((option)=>option.id===Number(button.dataset.id));
+      if(!item) return;
+      const card=button.parentElement;
+      let favorite=card.querySelector(".sdh-favorite-toggle");
+      if(!favorite){favorite=document.createElement("button");favorite.type="button";favorite.className="sdh-favorite-toggle";card.prepend(favorite);}
+      const isFavorite=state.favorites.has(item.id);
+      favorite.classList.toggle("is-favorite",isFavorite);
+      favorite.setAttribute("aria-pressed",String(isFavorite));
+      favorite.setAttribute("aria-label",isFavorite?"Remove from saved options":"Save option");
+      favorite.title=isFavorite?"Remove from saved options":"Save option";
+      favorite.innerHTML=isFavorite?'<i class="fa-solid fa-star" aria-hidden="true"></i>':'<i class="fa-regular fa-star" aria-hidden="true"></i>';
+      const score=factors(item), ordered=[...score].sort((a,b)=>b.score-a.score), low=[...score].sort((a,b)=>a.score-b.score);
+      let box=button.parentElement.querySelector(".sdh-meta");
+      if(!box){box=document.createElement("div");box.className="sdh-meta";button.before(box);}
+      const alerts=app.alerts(item,app.prefs());
+      const strengths=ordered.slice(0,3).map((f)=>`${f.name} (${f.score}%)`);
+      const weaknesses=low.slice(0,3).map((f)=>`${f.name} (${f.score}%)`);
+      const sig=JSON.stringify([strengths,weaknesses,alerts]);
+      if(box.dataset.sig!==sig){
+        box.dataset.sig=sig;
+        box.innerHTML=`<strong>${Math.round(score.reduce((sum,f)=>sum+f.score*(app.weights()[f.key]||0),0))}% match</strong><div class="sdh-match" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(score.reduce((sum,f)=>sum+f.score*(app.weights()[f.key]||0),0))}"><span style="width:${Math.max(0,Math.min(100,score.reduce((sum,f)=>sum+f.score*(app.weights()[f.key]||0),0)))}%"></span></div>
+          <div>Advantages: ${strengths.join("; ")}. Disadvantages: ${weaknesses.join("; ")}.</div>
+          <div>Strongest: ${ordered[0]?.name||"—"} · Weakest: ${low[0]?.name||"—"}</div>
+          ${alerts.length?`<div class="sdh-alert">⚠ ${alerts.map(esc).join(" · ")}</div>`:'<div class="sdh-good">No requirement alerts.</div>'}`;
+      }
+    });
+  }
+  function renderExplanation(list) {
+    const target=$("sdh-explanation"), best=list.find((x)=>x.eligible);
+    if(!list.length){target.innerHTML='<p class="sdh-empty">Select options above to get a personalized explanation, analysis and comparison.</p>';return;}
+    const chosen=best||list[0], strongest=[...chosen.factors].sort((a,b)=>b.score-a.score).slice(0,3);
+    const weak=[...chosen.factors].sort((a,b)=>a.score-b.score).slice(0,3);
+    const tradeoffs=chosen.factors.filter((f)=>f.score<70).map((f)=>`${f.name} is a relative trade-off at ${Math.round(f.score)}%`);
+    const lower=list.filter((x)=>x.id!==chosen.id).map((x)=>`${x.name} scored ${x.score}%${x.eligible?"":" and is currently ineligible"}`);
+    target.innerHTML=`<h3>Recommendation: ${esc(chosen.name)} · ${chosen.score}% compatibility</h3>
+      <p>${chosen.eligible?"This is the highest-scoring option that meets the current requirements.":"No selected option meets every current requirement; this is the highest-scoring alternative."}</p>
+      <div class="sdh-analysis">
+        <article><strong>Top reasons</strong><ul>${htmlList(strongest.map((f)=>`${f.name}: ${Math.round(f.score)}% factor fit, ${Math.round(f.score*(app.weights()[f.key]||0))} weighted points`))}</ul></article>
+        <article><strong>Weak points</strong><ul>${htmlList(weak.map((f)=>`${f.name}: ${Math.round(f.score)}% factor fit`))}</ul></article>
+        <article><strong>Trade-offs</strong><ul>${htmlList(tradeoffs.length?tradeoffs:["No factor scores below 70%; compare costs and preferences before deciding."])}</ul></article>
+        <article><strong>Why others ranked lower</strong><ul>${htmlList(lower.length?lower:["No other options selected."])}</ul></article>
+      </div>
+      <p>Scores are a decision aid based on the displayed fictional sample data and your factor weights, not a guarantee of outcomes.</p>`;
+  }
+  function renderCharts(list) {
+    const ranks=rankAll(), before=state.before||ranks;
+    const previousById=new Map(before.map((item,index)=>[item.id,{...item,rank:index+1}]));
+    const up=ranks.filter((item,index)=>{const previous=previousById.get(item.id);return previous&&previous.rank>index+1;}).length;
+    const down=ranks.filter((item,index)=>{const previous=previousById.get(item.id);return previous&&previous.rank<index+1;}).length;
+    const newlyEligible=ranks.filter((item)=>item.eligible&&!previousById.get(item.id)?.eligible).length;
+    const noLongerEligible=ranks.filter((item)=>!item.eligible&&previousById.get(item.id)?.eligible).length;
+    $("sdh-whatif-summary").innerHTML=`
+      <div class="sdh-whatif-stat"><span>Options ranked</span><strong>${ranks.length}</strong></div>
+      <div class="sdh-whatif-stat is-positive"><span>Moved up</span><strong>${up}</strong></div>
+      <div class="sdh-whatif-stat ${down?"is-negative":""}"><span>Moved down</span><strong>${down}</strong></div>
+      <div class="sdh-whatif-stat"><span>Eligibility changes</span><strong>+${newlyEligible} / −${noLongerEligible}</strong></div>`;
+    if(!window.Chart)return;
+    const labels=list.map((x)=>x.name.length>18?x.name.slice(0,18)+"…":x.name), colors=["#2563eb","#7c3aed","#16a34a","#f59e0b","#dc2626"];
+    if(state.radar)state.radar.destroy();
+    const factorNames=list[0]?.factors.map((f)=>f.name)||[];
+    state.radar=new Chart($("sdh-radar"),{type:"radar",data:{labels:factorNames,datasets:list.map((x,i)=>({label:x.name,data:x.factors.map((f)=>Math.round(f.score)),borderColor:colors[i%colors.length],backgroundColor:colors[i%colors.length]+"22",borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{stepSize:20}}}}});
+    if(state.pie)state.pie.destroy();
+    state.pie=new Chart($("sdh-pie"),{type:"pie",data:{labels:list.map((x)=>x.name),datasets:[{data:list.map((x)=>Number(x.score.toFixed(1))),backgroundColor:["#2563eb","#7c3aed","#16a34a","#f59e0b","#dc2626"],borderColor:document.documentElement.getAttribute("data-theme")==="dark"?"#11182b":"#ffffff",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"},tooltip:{callbacks:{label:(context)=>`${context.label}: ${context.raw}% match`}}}}});
+    if(state.chart)state.chart.destroy();
+    const current=ranks.slice(0,8), dark=document.documentElement.getAttribute("data-theme")==="dark";
+    const tickColor=dark?"#c3cce0":"#59657c", gridColor=dark?"rgba(255,255,255,.09)":"rgba(32,45,75,.09)";
+    state.chart=new Chart($("sdh-before-chart"),{type:"bar",data:{labels:current.map((x)=>x.name),datasets:[
+      {label:"Current score",data:current.map((x)=>x.score),backgroundColor:current.map((x)=>{const old=previousById.get(x.id)?.score??x.score;return x.score>old+.05?"#13a985dd":x.score<old-.05?"#ed9a32dd":"#4f72e8dd";}),borderRadius:7,borderSkipped:false,maxBarThickness:22},
+      {label:"Previous score",data:current.map((x)=>previousById.get(x.id)?.score??x.score),backgroundColor:"#a78bfa99",borderRadius:7,borderSkipped:false,maxBarThickness:22}
+    ]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,animation:{duration:450},plugins:{legend:{display:false},tooltip:{callbacks:{title:(items)=>items[0]?.label||"",label:(item)=>`${item.dataset.label}: ${Number(item.parsed.x).toFixed(1)}%`,footer:(items)=>{const index=items[0]?.dataIndex,item=current[index],old=item&&previousById.get(item.id);return item&&old?`Rank #${index+1} · previously #${old.rank}`:"New option";}}}},scales:{x:{min:0,max:100,grid:{color:gridColor},ticks:{color:tickColor,stepSize:20,callback:(value)=>`${value}%`}},y:{reverse:true,grid:{display:false},ticks:{color:tickColor,callback:(value,index)=>{const name=current[index]?.name||"";return `#${index+1} ${name.length>23?name.slice(0,21)+"…":name}`;}}}}}});
+  }
+  function updateMoves() {
+    const now=rankAll();
+    state.before=state.previous||now;
+    state.previous=now;
+  }
+  function applyFilters() {
+    const facetSelections=app.facetNames.map((_,index)=>[...document.querySelectorAll(`[data-facet="${index}"]:checked`)].map((input)=>input.value));
+    document.querySelectorAll(".sdh-facet-dropdown").forEach((dropdown,index)=>{const count=facetSelections[index].length;dropdown.querySelector(".sdh-facet-value").textContent=count?`${count} selected`:"All";dropdown.classList.toggle("has-selection",count>0);});
+    const min=Number($("sdh-min").value)||0,max=Number($("sdh-max").value)||Infinity, sort=$("sdh-sort").value;
+    const entries=app.options.map((item)=>({item,score:factors(item).reduce((sum,f)=>sum+f.score*(app.weights()[f.key]||0),0)}));
+    entries.sort((a,b)=>sort==="price"?app.price(a.item)-app.price(b.item):sort==="rating"?app.rating(b.item)-app.rating(a.item):defaults[sort]!==undefined?factors(b.item).find((f)=>f.key===sort).score-factors(a.item).find((f)=>f.key===sort).score:b.score-a.score);
+    const grids=[...document.querySelectorAll(".laptop-grid,.college-grid,.job-grid")];
+    for(const grid of grids) {
+      const cards=[...grid.querySelectorAll(":scope > div")];
+      cards.sort((a,b)=>entries.findIndex((e)=>e.item.id===Number(a.querySelector(".add-btn")?.dataset.id))-entries.findIndex((e)=>e.item.id===Number(b.querySelector(".add-btn")?.dataset.id))).forEach((card)=>grid.appendChild(card));
+      cards.forEach((card)=>{
+        const id=Number(card.querySelector(".add-btn")?.dataset.id), item=app.options.find((x)=>x.id===id);
+        const facetsValue=app.facets(item);
+        const ok=app.price(item)>=min&&app.price(item)<=max&&facetSelections.every((choices,i)=>!choices.length||choices.some((v)=>facetsValue.includes(v)));
+        card.style.display=ok&&(!state.onlyFavorites||state.favorites.has(id))?"":"none";
+      });
+    }
+    const renderedIds=new Set([...document.querySelectorAll(".add-btn[data-id]")].map((button)=>Number(button.dataset.id)));
+    const visible=entries.filter(({item})=>renderedIds.has(item.id)&&app.price(item)>=min&&app.price(item)<=max&&(!state.onlyFavorites||state.favorites.has(item.id))&&facetSelections.every((choices,i)=>!choices.length||choices.some((v)=>app.facets(item).includes(v))));
+    $("sdh-total").textContent=String(visible.length);
+    $("sdh-eligible").textContent=String(visible.filter(({item})=>app.eligible(item,app.prefs())).length);
+    const ranked=visible.map(({item,score})=>({item,score,eligible:app.eligible(item,app.prefs())})).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.score-a.score);
+    $("sdh-best").textContent=ranked[0]?app.displayName(ranked[0].item):"—";
+    $("sdh-average").textContent=ranked.length?(ranked.reduce((sum,x)=>sum+x.score,0)/ranked.length).toFixed(1)+"%":"—";
+    $("sdh-saved-count").textContent=String(savedList("saved").length);
+    $("sdh-favorites-count").textContent=String(state.favorites.size);
+    $("sdh-favorites-label").textContent=`Saved options: ${state.favorites.size}`;
+  }
+  function drawLists(){
+    const render=(id,name)=>{$(id).innerHTML=savedList(name).map((item)=>`<div class="sdh-row"><div><strong>${esc(item.name)}</strong><div>${new Date(item.date).toLocaleString()} · ${item.selected.length} options · ${esc(item.recommended||"No recommendation")} ${item.score==null?"":"· "+item.score+"%"}</div></div><div><button class="btn btn-ghost btn-sm" data-open="${esc(item.id)}" data-list="${name}">Open</button> <button class="btn btn-danger btn-sm" data-delete="${esc(item.id)}" data-list="${name}">Delete</button></div></div>`).join("")||'<p class="sdh-empty">No saved comparisons yet.</p>';};
+    render("sdh-saved-list","saved");render("sdh-history-list","history");
+  }
+  function refresh() {
+    const total=Object.values(app.weights()).reduce((a,b)=>a+b,0);
+    const scenarioInput=$("sdh-scenario-value"),scenarioOutput=$("sdh-scenario-output");
+    const scenarioValue=Number(app.prefs()[scenario.field]);
+    scenarioInput.value=String(scenarioValue);scenarioOutput.textContent=scenario.format(scenarioValue);
+    refreshCards();applyFilters();
+    updateMoves();
+    const list=scored();renderExplanation(list);renderCharts(list);drawLists();
+    const totalEl=$("sdh-weight-total");totalEl.textContent=`Current weight total: ${Math.round(total*100)}%`;
+    totalEl.classList.toggle("invalid",Math.abs(total-1)>.0001);
+  }
+  function snap(name) {
+    const list=scored(), best=list.find((x)=>x.eligible)||list[0];
+    return {id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name,date:new Date().toISOString(),...app.getSnapshot(),results:list.map((x,i)=>({rank:i+1,id:x.id,name:x.name,score:x.score,eligible:x.eligible,factors:x.factors})),recommended:best?.name||"",score:best?.score??null};
+  }
+  function mockEntry(name, selected, daysAgo) {
+    const prefs=app.prefs(),weights=app.weights();
+    const results=selected.map((id)=>app.options.find((item)=>item.id===id)).filter(Boolean).map((item)=>{
+      const factors=app.factors(item,prefs);
+      const score=Math.round(factors.reduce((sum,factor)=>sum+factor.score*(weights[factor.key]||0),0)*10)/10;
+      return {id:item.id,name:app.displayName(item),score,eligible:app.eligible(item,prefs),factors};
+    }).sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.score-a.score)
+      .map((item,index)=>({...item,rank:index+1}));
+    const best=results.find((item)=>item.eligible)||results[0];
+    return {id:`demo-${app.key}-${daysAgo}`,name,date:new Date(Date.now()-daysAgo*86400000).toISOString(),selected:[...selected],prefs,weights,results,recommended:best?.name||"",score:best?.score??null};
+  }
+  function seedDemoData() {
+    const marker=key+"demo_seeded";
+    try {
+      if(localStorage.getItem(marker)) return;
+      const demoIds=app.options.slice(0,3).map((item)=>item.id);
+      const alternateIds=app.options.slice(3,6).map((item)=>item.id);
+      const examples=[
+        mockEntry(`Demo · ${app.kind} shortlist`,app.selected().length?app.selected():demoIds,0),
+        mockEntry(`Demo · ${app.kind} alternatives`,alternateIds.length?alternateIds:demoIds,1)
+      ];
+      let stored=true;
+      if(!savedList("saved").length) stored=store("saved",examples)&&stored;
+      if(!savedList("history").length) stored=store("history",examples)&&stored;
+      if(stored) localStorage.setItem(marker,"1");
+    } catch(error) {
+      app.notify("Could not load demo comparisons: "+error.message,"error");
+    }
+  }
+  function saveComparison() {
+    if(!app.selected().length){app.notify("Add at least one option before saving.","error");return;}
+    const name=$("sdh-name").value.trim();
+    if(!name){app.notify("Enter a comparison name before saving.","error");$("sdh-name").focus();return;}
+    const entry=snap(name),saved=savedList("saved"),history=savedList("history");
+    if(store("saved",[entry,...saved].slice(0,50))&&store("history",[entry,...history].slice(0,100))){app.notify("Comparison saved locally.");refresh();}
+  }
+  function openEntry(entry) {
+    app.setState(entry);const weights=entry.weights||defaults;
+    app.setWeights(weights);store("weights",weights);document.querySelectorAll("[data-weight]").forEach((input)=>input.value=Math.round((weights[input.dataset.weight]||0)*100));
+    refresh();app.notify("Comparison reopened.");
+  }
+  function csv() {
+    const list=scored();if(!list.length){app.notify("Select options before exporting.","error");return;}
+    const headers=["Rank","Option","Price/Fees/Salary",...list[0].factors.map((f)=>f.name+" factor score"),"Compatibility %","Eligible","Alerts"];
+    const rows=[headers,...list.map((x,i)=>[i+1,x.name,app.price(x.item),...x.factors.map((f)=>Math.round(f.score*10)/10),x.score,x.eligible?"Yes":"No",x.alerts.join("; ")])];
+    const text=rows.map((row)=>row.map((v)=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+text],{type:"text/csv;charset=utf-8"}));a.download=`${app.key}-comparison.csv`;a.click();URL.revokeObjectURL(a.href);
+  }
+  function pdf() {
+    const list=scored(),PDF=window.jspdf?.jsPDF;if(!list.length){app.notify("Select options before exporting.","error");return;}if(!PDF){app.notify("PDF library unavailable. Check your internet connection and retry.","error");return;}
+    const doc=new PDF(),date=new Date().toLocaleString(),prefs=app.prefs();let y=18;
+    const add=(text,size=10)=>{doc.setFontSize(size);const lines=doc.splitTextToSize(String(text),180);if(y+lines.length*6>280){doc.addPage();y=18;}doc.text(lines,15,y);y+=lines.length*6+2;};
+    doc.setFontSize(18);doc.text("Smart Decision Helper",15,y);y+=10;add(`${app.kind} comparison report · ${date}`,11);
+    add("Preferences: "+Object.entries(prefs).filter(([k])=>k!=="search"&&k!=="location"&&k!=="brand"&&k!=="workMode").map(([k,v])=>`${k}: ${v}`).join(", "));
+    add("Selected options: "+list.map((x)=>x.name).join("; "));
+    add("FINAL RANKING",13);
+    add("RANK | OPTION | PRICE / FEES / SALARY | MATCH | STATUS",9);
+    list.forEach((x,i)=>add(`#${i+1} | ${x.name} | ${app.price(x.item)} | ${x.score}% | ${x.eligible?"eligible":"ineligible"}; ${x.alerts.join(". ")}`));
+    const best=list.find((x)=>x.eligible)||list[0];add("RECOMMENDATION",13);add(best?`${best.name} (${best.score}%). ${[...best.factors].sort((a,b)=>b.score-a.score).slice(0,3).map((f)=>`${f.name}: ${Math.round(f.score)}%`).join("; ")}`:"No selection.");
+    add("ADVANTAGES AND DISADVANTAGES",13);
+    list.forEach((x)=>{const ordered=[...x.factors].sort((a,b)=>b.score-a.score);add(`${x.name}: Advantages — ${ordered.slice(0,3).map((f)=>`${f.name} ${Math.round(f.score)}%`).join(", ")}. Disadvantages — ${ordered.slice(-3).reverse().map((f)=>`${f.name} ${Math.round(f.score)}%`).join(", ")}.`);});
+    add("Recommendation scores are based on fictional sample records and user-selected weights; verify details independently.");
+    doc.save(`${app.key}-comparison-report.pdf`);
+  }
+  async function share() {
+    const list=scored();if(!list.length){app.notify("Select options before sharing.","error");return;}
+    const best=list.find((x)=>x.eligible)||list[0],text=`${app.kind} comparison — Smart Decision Helper\n${list.map((x,i)=>`${i+1}. ${x.name}: ${x.score}%${x.eligible?"":" (ineligible)"}`).join("\n")}\nRecommendation: ${best.name} (${best.score}%).`;
+    if(navigator.share){try{await navigator.share({title:"Smart Decision Helper comparison",text});return;}catch(error){if(error.name==="AbortError")return;}}
+    try{await navigator.clipboard.writeText(text);app.notify("Summary copied to clipboard.");}
+    catch(error){const area=document.createElement("textarea");area.value=text;document.body.appendChild(area);area.select();const copied=document.execCommand("copy");area.remove();app.notify(copied?"Summary copied to clipboard.":"Could not copy summary: "+error.message,copied?"":"error");}
+  }
+  function bind() {
+    const applyScenario=(value)=>{
+      const prefs={...app.prefs(),[scenario.field]:Number(value)};
+      app.setState({selected:app.selected(),prefs});
+      refresh();
+    };
+    $("sdh-scenario-value").addEventListener("input",(event)=>applyScenario(event.target.value));
+    $("sdh-scenario-reset").addEventListener("click",()=>applyScenario(scenarioDefault));
+    document.querySelectorAll("[data-weight]").forEach((input)=>input.addEventListener("input",()=>{
+      const weights={};document.querySelectorAll("[data-weight]").forEach((field)=>weights[field.dataset.weight]=Number(field.value)/100);
+      const total=Object.values(weights).reduce((a,b)=>a+b,0);
+      const valid=Object.values(weights).every((value)=>Number.isInteger(value*100)&&value>=0&&value<=1);
+      $("sdh-weight-total").textContent=`Current weight total: ${Math.round(total*100)}%`;
+      $("sdh-weight-total").classList.toggle("invalid",!valid||Math.abs(total-1)>.0001);
+      if(valid&&Math.abs(total-1)<=.0001){store("weights",weights);app.setWeights(weights);refresh();}
+    }));
+    $("sdh-reset-weights").addEventListener("click",()=>{document.querySelectorAll("[data-weight]").forEach((input)=>input.value=Math.round(defaults[input.dataset.weight]*100));store("weights",defaults);app.setWeights(defaults);refresh();});
+    $("sdh-save").addEventListener("click",saveComparison);$("sdh-csv").addEventListener("click",csv);$("sdh-pdf").addEventListener("click",pdf);$("sdh-share").addEventListener("click",share);
+    [$("sdh-min"),$("sdh-max"),$("sdh-sort"),...document.querySelectorAll("[data-facet]")].forEach((el)=>el.addEventListener("input",refresh));
+    $("sdh-clear-filters").addEventListener("click",()=>{$("sdh-min").value="";$("sdh-max").value="";$("sdh-sort").value="score";document.querySelectorAll("[data-facet]").forEach((input)=>input.checked=false);refresh();});
+    document.addEventListener("click",(event)=>{if(!event.target.closest(".sdh-facet-dropdown"))document.querySelectorAll(".sdh-facet-dropdown[open]").forEach((dropdown)=>dropdown.open=false);});
+    document.addEventListener("input",(event)=>{if(!event.target.closest(".sdh-panel"))setTimeout(refresh,0);});
+    document.addEventListener("change",(event)=>{if(!event.target.closest(".sdh-panel"))setTimeout(refresh,0);});
+    document.addEventListener("click",(event)=>{
+      const open=event.target.closest("[data-open]"),del=event.target.closest("[data-delete]");
+      const favorite=event.target.closest(".sdh-favorite-toggle");
+      if(favorite){
+        const id=Number(favorite.parentElement.querySelector(".add-btn")?.dataset.id);
+        if(state.favorites.has(id))state.favorites.delete(id);else state.favorites.add(id);
+        store("favorites",[...state.favorites]);refresh();app.notify(state.favorites.has(id)?"Added to saved options.":"Removed from saved options.");return;
+      }
+      if(event.target.closest("#sdh-only-favorites")){
+        state.onlyFavorites=!state.onlyFavorites;$("sdh-only-favorites").classList.toggle("active",state.onlyFavorites);
+        $("sdh-only-favorites").setAttribute("aria-pressed",String(state.onlyFavorites));$("sdh-only-favorites").textContent=state.onlyFavorites?"Show all options":"Show saved only";refresh();return;
+      }
+      if(event.target.closest("#sdh-list-toggle")){
+        state.listView=!state.listView;optionsGrid?.classList.toggle("sdh-list-view",state.listView);
+        $("sdh-list-toggle").classList.toggle("active",state.listView);$("sdh-list-toggle").setAttribute("aria-pressed",String(state.listView));
+        $("sdh-list-toggle").textContent=state.listView?"Grid view":"List view";return;
+      }
+      if(open){const entry=savedList(open.dataset.list).find((x)=>x.id===open.dataset.open);if(entry)openEntry(entry);}
+      if(del&&confirm("Delete this saved comparison?")){const list=del.dataset.list;store(list,savedList(list).filter((x)=>x.id!==del.dataset.delete));refresh();}
+      setTimeout(refresh,0);
+    });
+    $("sdh-clear-data").addEventListener("click",()=>{
+      if(!confirm("Clear all saved comparisons, history, weights and selected options for this helper?"))return;
+      try{["saved","history","weights","favorites"].forEach((name)=>localStorage.removeItem(key+name));localStorage.removeItem("sdh_"+app.key+"_selected");state.favorites.clear();}
+      catch(error){app.notify("Could not clear saved data: "+error.message,"error");return;}
+      app.setState({selected:[],prefs:app.prefs()});document.querySelectorAll("[data-weight]").forEach((input)=>input.value=Math.round(defaults[input.dataset.weight]*100));app.setWeights(defaults);refresh();app.notify("Saved data cleared.");
+    });
+  }
+  function init() {
+    try{const stored=JSON.parse(localStorage.getItem(favoriteKey)||"[]");if(Array.isArray(stored))state.favorites=new Set(stored.filter((id)=>app.options.some((option)=>option.id===id)));}
+    catch(error){app.notify("Could not load saved options: "+error.message,"error");}
+    const persisted=savedList("weights"), valid=Object.keys(defaults).every((k)=>Number.isFinite(persisted[k]))&&Math.abs(Object.values(persisted).reduce((a,b)=>a+b,0)-1)<.0001;
+    const weights=valid?persisted:defaults;app.setWeights(weights);
+    document.querySelectorAll("[data-weight]").forEach((input)=>input.value=Math.round(weights[input.dataset.weight]*100));
+    seedDemoData();bind();state.previous=rankAll();state.before=state.previous;drawLists();refresh();
+  }
+  init();
+})();
+
+</script>
+
+<script>
+(() => {
+  "use strict";
+  const app=window.SDH;
+  if(!app||document.getElementById("sdh-decision-lab"))return;
+  const $=(id)=>document.getElementById(id);
+  const esc=(value)=>String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+  const money=(value)=>"₹"+Math.round(Number(value)||0).toLocaleString("en-IN");
+  const factors=(item,prefs=app.prefs())=>app.factors(item,prefs);
+  const score=(item,weights=app.weights(),prefs=app.prefs())=>Math.round(factors(item,prefs).reduce((sum,f)=>sum+f.score*(weights[f.key]||0),0)*10)/10;
+  const selected=()=>app.selected().map((id)=>app.options.find((item)=>item.id===id)).filter(Boolean);
+  const names=Object.fromEntries(app.factors(app.options[0],app.prefs()).map(factor=>[factor.key,factor.name]));
+  const type=app.kind;
+  const goalMaps=type==="Laptop"?{
+    "Gaming PC":{keys:{processor:.48,ram:.22,storage:.1,budget:.1,rating:.1},words:["gaming","rtx","radeon"],minimum:72},
+    "Programming":{keys:{processor:.3,ram:.28,storage:.2,budget:.12,rating:.1},words:["developer","programming","thinkpad"],minimum:60},
+    "Video editing":{keys:{processor:.34,ram:.25,storage:.22,budget:.1,rating:.09},words:["creator","studio","rtx","editing"],minimum:68},
+    "Office & study":{keys:{budget:.3,battery:.28,rating:.2,processor:.12,storage:.1},words:["student","office","inspiron","ideapad"],minimum:40}
+  }:type==="College"?{
+    "Career placement":{keys:{placement:.38,package:.24,rating:.16,faculty:.12,fees:.1},words:["cse","it","ai","ds"]},
+    "Higher studies":{keys:{faculty:.3,placement:.16,package:.1,infra:.24,rating:.1,fees:.1},words:["cse","ai","ds","ml"]},
+    "Research":{keys:{faculty:.3,infra:.28,placement:.1,package:.1,rating:.12,fees:.1},words:["ai","ds","ml","cse"]},
+    "Entrepreneurship":{keys:{infra:.2,faculty:.18,placement:.2,package:.18,rating:.14,fees:.1},words:["it","cse","ai"]}
+  }:{
+    "High salary":{keys:{salary:.48,growth:.18,rating:.14,wlb:.1,modeLoc:.1},words:["engineer","developer","architect","manager"]},
+    "Leadership":{keys:{growth:.38,salary:.24,rating:.18,wlb:.12,modeLoc:.08},words:["lead","manager","architect","director"]},
+    "Technical expertise":{keys:{growth:.32,salary:.2,rating:.14,wlb:.12,modeLoc:.08},words:["engineer","developer","data","security","cloud","analyst"]},
+    "Work-life balance":{keys:{wlb:.42,modeLoc:.2,rating:.16,salary:.12,growth:.08},words:["remote","flexible"]}
+  };
+  const goalNames=Object.keys(goalMaps);
+  const facet0=[...new Set(app.options.map(item=>app.facets(item)[0]))].sort();
+  const journalKey="sdh_"+app.key+"_decision_journal";
+  let editingId=null;
+  const style=document.createElement("style");
+  style.textContent=`
+    #sdh-decision-lab{scroll-margin-top:100px}
+    .lab-intro{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+    .lab-badge{padding:7px 11px;border:1px solid color-mix(in srgb,var(--secondary) 24%,var(--border));border-radius:99px;background:color-mix(in srgb,var(--secondary) 8%,var(--surface));color:var(--secondary);font-size:.75rem;font-weight:800}
+    .lab-controls,.lab-grid,.lab-two,.lab-journal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .lab-controls{grid-template-columns:repeat(3,minmax(0,1fr));margin:15px 0}
+    .lab-field{display:flex;min-width:0;flex-direction:column;gap:7px;color:var(--text-muted);font-size:.78rem;font-weight:750}
+    .lab-field input,.lab-field select,.lab-field textarea{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);font:inherit}
+    .lab-field textarea{min-height:84px;resize:vertical}
+    .lab-card{min-width:0;padding:16px;border:1px solid var(--border);border-radius:17px;background:linear-gradient(145deg,var(--surface-2),var(--surface))}
+    .lab-card h3{margin:0 0 10px;color:var(--text);font-size:.98rem}
+    .lab-card p,.lab-card li{font-size:.84rem;line-height:1.55}
+    .lab-results{display:grid;gap:10px}
+    .lab-result{padding:13px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+    .lab-result h4{margin:0 0 8px;color:var(--text);font-size:.9rem}
+    .lab-result ul{margin:7px 0 0;padding-left:19px;color:var(--text-muted)}
+    .lab-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:99px;font-size:.73rem;font-weight:850}
+    .lab-status.good{background:rgba(22,163,74,.12);color:#13834a}.lab-status.partial{background:rgba(245,158,11,.14);color:#9a6200}.lab-status.bad{background:rgba(220,38,38,.11);color:#bd3030}
+    [data-theme="dark"] .lab-status.good{color:#69dda0}[data-theme="dark"] .lab-status.partial{color:#ffd071}[data-theme="dark"] .lab-status.bad{color:#ff8585}
+    .lab-gap{border-left:3px solid #e2a025}.lab-gap.high{border-left-color:#d94a4a}.lab-gap.low{border-left-color:#29a778}
+    .lab-gap-line{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin:6px 0;font-size:.8rem}
+    .lab-table-wrap{overflow:auto}
+    .lab-table{width:100%;min-width:460px;border-collapse:collapse;font-size:.76rem}.lab-table th,.lab-table td{padding:7px;border-bottom:1px solid var(--border);text-align:left}.lab-table input{width:68px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+    .lab-rank{margin:0;padding-left:23px}.lab-rank li{padding:3px 0;font-size:.8rem}
+    .lab-impact{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:10px;margin-top:12px}
+    .lab-impact-node{padding:12px 8px;border:1px solid color-mix(in srgb,var(--secondary) 25%,var(--border));border-radius:14px;background:var(--surface);text-align:center;font-size:.79rem;font-weight:750}
+    .lab-impact-link{text-align:center;color:var(--secondary);font-size:.74rem;font-weight:750}
+    .lab-impact-link:after{content:"→";display:block;font-size:1.5rem;line-height:1}
+    .lab-checks{display:grid;gap:8px}.lab-check{display:flex;align-items:flex-start;gap:8px;color:var(--text-muted);font-size:.82rem}
+    .lab-check input{margin-top:3px;accent-color:var(--secondary)}
+    .lab-progress{height:9px;overflow:hidden;border-radius:99px;background:var(--surface-2)}.lab-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--secondary),var(--accent));transition:width .25s}
+    .lab-journal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .lab-journal-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:11px;border:1px solid var(--border);border-radius:13px;background:var(--surface-2)}
+    .lab-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .lab-report{padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+    .lab-report h3{margin:0 0 5px}.lab-report .lab-report-meta{color:var(--text-muted);font-size:.78rem}
+    .lab-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+    .lab-report-grid div{padding:10px;border-radius:11px;background:var(--surface-2);font-size:.8rem}
+    @media(max-width:760px){.lab-controls,.lab-grid,.lab-two,.lab-journal-grid{grid-template-columns:1fr}.lab-impact-node{font-size:.7rem;padding:10px 5px}.lab-report-grid{grid-template-columns:1fr}}
+    @media print{body.sdh-printing *{visibility:hidden!important}body.sdh-printing .lab-report.lab-print-focus,body.sdh-printing .lab-report.lab-print-focus *{visibility:visible!important}body.sdh-printing .lab-report.lab-print-focus{position:absolute;inset:0 auto auto 0;width:100%;border:0;box-shadow:none;background:#fff;color:#111}body.sdh-printing .lab-report.lab-print-focus .lab-actions{display:none!important}}
+  `;
+  document.head.appendChild(style);
+  const content=document.querySelector(".content"),footer=content?.querySelector("footer");
+  const mount=footer||content;
+  if(!mount)return;
+  mount.insertAdjacentHTML("beforebegin",`
+    <section class="sdh-panel" id="sdh-decision-lab">
+      <div class="lab-intro"><div><h2>Decision Lab</h2><p>Interactive decision support calculated from the fictional sample options on this page.</p></div><span class="lab-badge">LOCAL · SAMPLE DATA</span></div>
+      <div class="lab-controls">
+        <label class="lab-field">Personal goal<select id="lab-goal">${goalNames.map((x)=>`<option>${esc(x)}</option>`).join("")}</select></label>
+        ${type==="Laptop"?`<label class="lab-field">Preferred brand<select id="lab-location"><option value="">Flexible / no preference</option>${facet0.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></label><label class="lab-field">Minimum RAM requirement (GB)<input id="lab-ram" type="number" min="4" max="128" step="4" value="${Number(app.prefs().ramPref)||16}"></label><label class="lab-field">Software workload · sample proxy<select id="lab-software"><option value="office">Office / study</option><option value="programming">Programming / development</option><option value="editing">Video editing</option><option value="gaming">Gaming / 3D</option></select></label>`:
+          type==="College"?`<label class="lab-field">Preferred location<select id="lab-location"><option value="">Flexible / no preference</option>${facet0.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></label><label class="lab-field">Required course<select id="lab-course"><option value="">Choose from this sample</option>${[...new Set(app.options.flatMap(item=>item.courses||[]))].sort().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></label><label class="lab-field">Minimum facility score (1–10)<input id="lab-facility" type="number" min="1" max="10" value="7"></label>`:
+          `<label class="lab-field">Preferred location<select id="lab-location"><option value="">Flexible / no preference</option>${facet0.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></label><label class="lab-field">Preferred work mode<select id="lab-mode"><option value="">Flexible / no preference</option>${[...new Set(app.options.map(item=>item.workMode).filter(Boolean))].sort().map(x=>`<option>${esc(x)}</option>`).join("")}</select></label><label class="lab-field">Skill / experience requirement<input id="lab-skill" placeholder="Skill keyword (optional)"><select id="lab-experience" aria-label="Minimum experience"><option value="">Any experience</option><option>Fresher</option><option>1-2 yrs</option><option>2-3 yrs</option><option>3-5 yrs</option><option>5+ yrs</option></select></label>`}
+      </div>
+      <div class="lab-grid">
+        <article class="lab-card"><h3>1 · Compatibility & feature gaps</h3><div id="lab-compat" class="lab-results"></div></article>
+        <article class="lab-card"><h3>2 · Goal alignment & alternatives</h3><div id="lab-goal-results" class="lab-results"></div></article>
+        <article class="lab-card"><h3>3 · Opportunity cost</h3><div id="lab-opportunity"></div></article>
+        <article class="lab-card"><h3>4 · Negotiation & improvement assistant</h3><div id="lab-negotiation"></div></article>
+        <article class="lab-card"><h3>5 · Decision readiness</h3><div class="lab-checks">
+          <label class="lab-check"><input type="checkbox" id="lab-risks"> I reviewed the main risks and verified uncertain specifications.</label>
+          <label class="lab-check"><input type="checkbox" id="lab-alternatives"> I compared at least one alternative and considered the trade-offs.</label>
+        </div><div id="lab-readiness" style="margin-top:12px"></div></article>
+        <article class="lab-card"><h3>6 · Decision impact map</h3><p>Explore how a selection affects other criteria. Values use displayed sample specifications.</p><div id="lab-impact"></div></article>
+      </div>
+      <article class="lab-card" style="margin-top:14px"><h3>7 · Decision sensitivity analysis</h3><p>Adjust two weight profiles independently. Each profile is normalized to 100% for ranking.</p><div id="lab-sensitivity"></div><div id="lab-sensitivity-output" class="lab-two"></div></article>
+      <article class="lab-card" style="margin-top:14px"><h3>8 · Multi-person opinion simulator</h3><p>These are simulated scoring perspectives, not real people’s opinions or endorsements.</p><div id="lab-opinions" class="lab-two"></div></article>
+      <article class="lab-card" style="margin-top:14px"><h3>9 · Decision review & learning journal</h3><div class="lab-journal-grid">
+        <label class="lab-field">What did you select?<select id="lab-journal-choice"><option value="">Choose an option</option></select></label>
+        <label class="lab-field">What mattered most?<input id="lab-journal-priority" maxlength="160" placeholder="e.g. battery life and cost"></label>
+        <label class="lab-field">Why did you select it?<textarea id="lab-journal-why" maxlength="800" placeholder="Write your reason"></textarea></label>
+        <label class="lab-field">Which alternatives did you reject?<textarea id="lab-journal-rejected" maxlength="500" placeholder="Optional"></textarea></label>
+        <label class="lab-field" style="grid-column:1/-1">Personal notes<textarea id="lab-journal-notes" maxlength="1500" placeholder="Add notes for your future review"></textarea></label>
+      </div><div class="lab-actions"><button class="btn btn-primary" type="button" id="lab-journal-save">Save decision record</button><button class="btn btn-ghost" type="button" id="lab-journal-cancel" hidden>Cancel edit</button></div><div id="lab-journal-list" class="lab-results" style="margin-top:12px"></div></article>
+      <article class="lab-card" style="margin-top:14px"><h3>10 · Final decision report cards</h3><p>Print a selected report or choose “Save as PDF” in the print dialog.</p><div id="lab-reports" class="lab-results"></div></article>
+    </section>
+  `);
+  const goalSelect=$("lab-goal"),locSelect=$("lab-location"),ramInput=$("lab-ram");
+  if(type!=="Laptop")locSelect.value=app.prefs().location||"";
+  if(type==="College")$("lab-course").value=app.prefs().course||"";
+  if(type==="Job")$("lab-mode").value=app.prefs().prefWorkMode||"";
+  const goalInfo=()=>goalMaps[goalSelect.value]||goalMaps[goalNames[0]];
+  const align=(item)=>{
+    const goal=goalInfo(),fs=factors(item),total=Object.values(goal.keys).reduce((sum,value)=>sum+value,0)||1;
+    const weighted=fs.reduce((sum,factor)=>sum+factor.score*((goal.keys[factor.key]||0)/total),0);
+    const text=(app.displayName(item)+" "+Object.values(item).filter(value=>typeof value==="string").join(" ")).toLowerCase();
+    const wordFit=goal.words.some(word=>text.includes(word));
+    const bonus=type==="Laptop"&&item.processorScore>=goal.minimum?8:type!=="Laptop"&&wordFit?12:wordFit?12:0;
+    return Math.max(0,Math.min(100,Math.round(weighted+bonus)));
+  };
+  const alignmentReason=(item)=>{
+    const goal=goalInfo(),contributors=factors(item).filter(factor=>goal.keys[factor.key]).map(factor=>({...factor,contribution:factor.score*goal.keys[factor.key]})).sort((a,b)=>b.contribution-a.contribution);
+    const text=(app.displayName(item)+" "+Object.values(item).filter(value=>typeof value==="string").join(" ")).toLowerCase();
+    const matches=goal.words.filter(word=>text.includes(word));
+    const factorText=contributors.slice(0,2).map(factor=>`${factor.name} fit ${Math.round(factor.score)}%`).join(" and ");
+    const labelText=matches.length?`Sample labels match ${matches.slice(0,2).join(", ")}.`:"No goal keyword appears in the sample labels; this score comes from weighted factors.";
+    return `${factorText||"Available factor fit"}; ${labelText}`;
+  };
+  const chosen=()=>selected().sort((a,b)=>score(b)-score(a))[0]||null;
+  const compatibility=(item)=>{
+    let checks=[];
+    if(type==="Laptop"){
+      const requiredRam=Math.max(4,Math.min(128,Number(ramInput.value)||16)),requiredStorage=Number(app.prefs().storagePref)||512;
+      checks=[{label:`RAM: ${item.ram} GB provided · ${requiredRam} GB required`,ok:item.ram>=requiredRam,critical:true},{label:`Storage: ${item.storage} GB provided · ${requiredStorage} GB required`,ok:item.storage>=requiredStorage,critical:true},{label:`${goalSelect.value} performance proxy · processor score ${item.processorScore}/100`,ok:item.processorScore>=goalInfo().minimum,critical:true}];
+      const workloads={office:{name:"Office / study",cpu:45,ram:8,storage:256,gpu:false},programming:{name:"Programming / development",cpu:65,ram:8,storage:256,gpu:false},editing:{name:"Video editing",cpu:78,ram:16,storage:512,gpu:false},gaming:{name:"Gaming / 3D",cpu:75,ram:16,storage:512,gpu:true}},workload=workloads[$("lab-software").value]||workloads.office;
+      const gpuFit=!workload.gpu||/nvidia|arc/i.test(item.gpu||"");
+      checks.push({label:`${workload.name} workload proxy · CPU ${item.processorScore}/${workload.cpu} minimum, RAM ${item.ram}/${workload.ram} GB minimum${workload.gpu?`, GPU ${item.gpu||"not listed"} ${gpuFit?"listed GPU class meets proxy":"discrete GPU proxy not met"}`:""}`,ok:item.processorScore>=workload.cpu&&item.ram>=workload.ram&&item.storage>=workload.storage&&gpuFit,critical:true});
+      checks.push({label:typeof item.ramUpgradeable==="boolean"?`RAM upgradeability: ${item.ramUpgradeable?"upgradeable":"not upgradeable"}`:"RAM upgradeability is not included in sample data; ask seller to confirm.",ok:typeof item.ramUpgradeable==="boolean"?item.ramUpgradeable:null,critical:false});
+      checks.push({label:typeof item.storageExpandable==="boolean"?`Storage expansion: ${item.storageExpandable?"supported":"not supported"}`:"Storage expansion is not included in sample data; ask seller to confirm.",ok:typeof item.storageExpandable==="boolean"?item.storageExpandable:null,critical:false});
+    }else if(type==="College"){
+      const course=$("lab-course").value||app.prefs().course||"";
+      checks=[{label:course?`Required course: ${course}`:`Course choice: ${goalSelect.value}`,ok:course?item.courses.includes(course):goalInfo().words.some(word=>item.courses.some(c=>c.toLowerCase().includes(word))),critical:true},{label:`Location ${item.location} ${locSelect.value?`· preference ${locSelect.value}`:"· no preference"}`,ok:!locSelect.value||item.location===locSelect.value,critical:false},{label:`Facilities: infrastructure ${item.infrastructure}/10 and faculty ${item.faculty}/10 · minimum ${Number($("lab-facility").value)||7}`,ok:item.infrastructure>=(Number($("lab-facility").value)||7)&&item.faculty>=(Number($("lab-facility").value)||7),critical:false}];
+    }else{
+      const skill=$("lab-skill").value.trim().toLowerCase(),text=(item.role+" "+item.benefits.join(" ")).toLowerCase(),requirement=$("lab-experience").value;
+      const roleFit=goalInfo().words.some(word=>item.role.toLowerCase().includes(word));
+      const experienceOrder={"Fresher":0,"1-2 yrs":1,"2-3 yrs":2,"3-5 yrs":3,"3+ yrs":3,"5+ yrs":4},actual=experienceOrder[item.experience]??1,required=experienceOrder[requirement]??0;
+      checks=[{label:`Role alignment: ${goalSelect.value}`,ok:roleFit,critical:true},{label:skill?`Skill keyword “${skill}”`: "Skills are not specified; role is used as a sample proxy",ok:skill?text.includes(skill):null,critical:!!skill},{label:`Experience: ${item.experience} · requested ${requirement||"any"}`,ok:actual>=required,critical:true},{label:`Work mode: ${item.workMode}`,ok:!$("lab-mode").value||item.workMode===$("lab-mode").value,critical:false},{label:`Location: ${item.location}`,ok:!locSelect.value||item.location===locSelect.value,critical:false}];
+    }
+    const gaps=checks.filter(check=>check.ok===false),unknown=checks.some(check=>check.ok===null);
+    const status=gaps.some(check=>check.critical)?"Not Compatible":gaps.length||unknown?"Partially Compatible":"Compatible";
+    const css=status==="Compatible"?"good":status==="Not Compatible"?"bad":"partial";
+    return {checks,gaps,unknown,status,css};
+  };
+  const gapLines=(item)=>{
+    const result=compatibility(item),lines=result.gaps.map(check=>({text:check.label,severity:check.critical?"High":"Medium",solution:"Compare another option in the current fictional sample or revise the requirement."}));
+    if(result.unknown)lines.push({text:type==="Laptop"?"Upgradeability is unknown in the fictional sample data.":"Some requirement details are not recorded in the sample.",severity:"Medium",solution:"Ask the provider to verify this before deciding."});
+    if(type==="Laptop"&&item.price>Number(app.prefs().budget||Infinity))lines.push({text:`Price is ${money(item.price-Number(app.prefs().budget))} over your budget.`,severity:"High",solution:"Compare a lower-cost sample model or test a budget change."});
+    if(type==="College"&&item.fees>app.prefs().maxFees)lines.push({text:`Annual fees exceed your limit by ${money(item.fees-app.prefs().maxFees)}.`,severity:"High",solution:"Check scholarship eligibility or compare an affordable sample college."});
+    if(type==="College"&&item.placement<Number(app.prefs().minPlacement||0))lines.push({text:`Sample placement rate ${item.placement}% is below your ${app.prefs().minPlacement}% minimum.`,severity:"High",solution:"Compare another sample college or revise the minimum if appropriate."});
+    if(type==="Job"&&item.salary<app.prefs().desiredSalary)lines.push({text:`Salary is ${item.salary} LPA against ${app.prefs().desiredSalary} LPA target.`,severity:"High",solution:"Discuss compensation or compare another sample offer."});
+    return lines;
+  };
+  const renderCompatibility=()=>{
+    const items=selected();
+    $("lab-compat").innerHTML=items.length?items.map(item=>{
+      const state=compatibility(item),gaps=gapLines(item);
+      return `<div class="lab-result"><h4>${esc(app.displayName(item))} <span class="lab-status ${state.css}">${state.status}</span></h4><ul>${state.checks.map(check=>`<li>${esc(check.label)} — ${check.ok===null?"Verify":check.ok?"Pass":"Gap"}</li>`).join("")}</ul><div style="margin-top:8px"><strong>Feature gaps</strong>${gaps.length?gaps.map(gap=>`<div class="lab-gap ${gap.severity==="High"?"high":""}"><div class="lab-gap-line"><span>${esc(gap.text)}</span><b>${gap.severity}</b></div><small>${esc(gap.solution)}</small></div>`).join(""):"<p>No current feature gaps identified from available sample fields.</p>"}</div></div>`;
+    }).join(""):'<p class="sdh-empty">Select options above to evaluate compatibility.</p>';
+  };
+  const renderGoal=()=>{
+    const items=selected(),all=app.options.slice().sort((a,b)=>align(b)-align(a));
+    const best=all[0],current=chosen(),eligibleAlternative=app.options.filter(item=>item.id!==current?.id&&app.eligible(item,app.prefs())).sort((a,b)=>align(b)-align(a))[0];
+    const currentEligible=current&&app.eligible(current,app.prefs());
+    const alternative=current&&!currentEligible?eligibleAlternative:best;
+    const alternativeLabel=current&&!currentEligible?"Closest eligible alternative in the existing sample":"Best goal-alignment alternative in the existing sample";
+    $("lab-goal-results").innerHTML=`${items.length?items.map(item=>`<div class="lab-result"><h4>${esc(app.displayName(item))} · ${align(item)}% goal alignment</h4><p>${esc(alignmentReason(item))}</p></div>`).join(""):"<p class='sdh-empty'>Select options to see their goal fit.</p>"}<div class="lab-result"><h4>Alternative path finder · ${esc(goalSelect.value)}</h4><p>${alternative?`${alternativeLabel}: <strong>${esc(app.displayName(alternative))}</strong> (${align(alternative)}% goal alignment, ${score(alternative)}% overall).`:"No eligible sample alternative is currently available."}${current&&!currentEligible?` The current top-scoring selection, ${esc(app.displayName(current))}, fails one or more active requirements.`:current&&best&&current.id===best.id?" You already selected the closest match.":current?` Current top-scoring selection: ${esc(app.displayName(current))}; compare before switching.`:""}</p><small>Suggestions use only options already listed here and active eligibility rules; results do not imply real-world availability.</small></div>`;
+  };
+  const renderOpportunity=()=>{
+    const item=chosen();
+    if(!item){$("lab-opportunity").innerHTML="<p class='sdh-empty'>Select an option to calculate opportunity cost.</p>";return;}
+    let detail="";
+    if(type==="Laptop"){
+      const next=app.options.filter(other=>other.price>item.price&&other.price<=item.price+5000).sort((a,b)=>b.processorScore-a.processorScore)[0];
+      detail=next?`An extra ${money(next.price-item.price)} in the existing dataset could buy <strong>${esc(app.displayName(next))}</strong>: processor ${next.processorScore-item.processorScore>=0?"+":""}${next.processorScore-item.processorScore} score, RAM ${next.ram-item.ram>=0?"+":""}${next.ram-item.ram} GB, storage ${next.storage-item.storage>=0?"+":""}${next.storage-item.storage} GB.`:"No listed model is priced within ₹5,000 above this option.";
+    }else if(type==="College"){
+      const next=app.options.filter(other=>other.fees>item.fees&&other.placement>item.placement).sort((a,b)=>(b.placement-a.placement)-(b.fees-a.fees)/10000)[0];
+      detail=next?`Choosing <strong>${esc(app.displayName(next))}</strong> instead costs ${money(next.fees-item.fees)} more per year for ${next.placement-item.placement} percentage-point higher sample placement. Four years at the same fee difference would be ${money((next.fees-item.fees)*4)} extra before scholarships or other costs.`:"No sample college has both higher fees and higher placement than this choice.";
+    }else{
+      const next=app.options.filter(other=>other.salary>item.salary).sort((a,b)=>(b.salary-item.salary)+(b.careerGrowth-item.careerGrowth)*.2)[0];
+      detail=next?`Choosing <strong>${esc(app.displayName(next))}</strong> instead offers ${next.salary-item.salary} LPA more gross annual salary (sample difference) and career growth ${next.careerGrowth-item.careerGrowth>=0?"+":""}${next.careerGrowth-item.careerGrowth}/10. Selecting the lower offer gives up that potential gross difference, before taxes, benefits, location costs, or negotiation.`:"No higher-salary sample offer is available for comparison.";
+    }
+    const snapshot=type==="Laptop"?`Price ${money(item.price)} · processor ${item.processorScore}/100 · RAM ${item.ram} GB · storage ${item.storage} GB.`:type==="College"?`Annual fees ${money(item.fees)} · placement ${item.placement}% · average package ${item.averagePackage} LPA.`:`Salary ${item.salary} LPA · growth ${item.careerGrowth}/10 · work-life balance ${item.workLifeBalance}/10.`;
+    $("lab-opportunity").innerHTML=`<div class="lab-result"><h4>Current choice: ${esc(app.displayName(item))}</h4><p>${snapshot}</p></div><div class="lab-result"><h4>What may be given up</h4><p>${detail}</p></div><small>Arithmetic uses fictional sample values only; not a prediction, market price, placement guarantee, or offer assurance.</small>`;
+  };
+  const renderNegotiation=()=>{
+    const item=chosen();
+    if(!item){$("lab-negotiation").innerHTML='<p class="sdh-empty">Select an option to get practical questions.</p>';return;}
+    const prompts=type==="Laptop"?[
+      `Can you confirm RAM slots, maximum supported memory, and whether it is upgradeable for ${app.displayName(item)}?`,
+      "Is the listed price eligible for a discount, student offer, or bundle?",
+      "Can you include an extended warranty or accidental-damage cover?",
+      "Please confirm the storage type and whether another drive can be installed."
+    ]:type==="College"?[
+      `What scholarships, merit awards, or fee concessions could apply to ${app.displayName(item)}?`,
+      "Are there installment options, hostel discounts, or transport concessions?",
+      "Can you share the current course-wise placement and internship breakdown?",
+      "Which facilities and academic support services are included in the listed fees?"
+    ]:[
+      `Can the ${item.salary} LPA salary be reviewed against my skills and ${item.role} responsibilities?`,
+      "Is a joining bonus or sign-on support available?",
+      "Could the work mode or location arrangement be adjusted?",
+      "What learning budget, leave benefits, and review timeline are included?"
+    ];
+    $("lab-negotiation").innerHTML=`<div class="lab-result"><h4>Questions to ask ${type==="Laptop"?"the seller":type==="College"?"the college":"the recruiter"}</h4><ul>${prompts.map(text=>`<li>${esc(text)}</li>`).join("")}</ul></div><p>These are discussion prompts, not promises. Confirm any terms directly in writing.</p>`;
+  };
+  const rankWith=(weights)=>app.options.filter(item=>app.selected().includes(item.id)).map(item=>({item,score:score(item,weights)})).sort((a,b)=>b.score-a.score);
+  const sensitivityProfiles=()=>{
+    const keys=Object.keys(app.weights()),base=app.weights(),alt={...base};
+    if(keys.length>1){const first=keys[0],second=keys[1],shift=Math.min(base[first]*.65,.18);alt[first]=Math.max(.02,base[first]-shift);alt[second]=Math.min(.85,base[second]+shift);const total=Object.values(alt).reduce((a,b)=>a+b,0);Object.keys(alt).forEach(key=>alt[key]/=total);}
+    return {keys,base,alt};
+  };
+  const normalize=(values)=>{const total=Object.values(values).reduce((sum,value)=>sum+(Number(value)||0),0);return total>0?Object.fromEntries(Object.entries(values).map(([key,value])=>[key,(Number(value)||0)/total])):null;};
+  const renderSensitivity=()=>{
+    const {keys,base,alt}=sensitivityProfiles();
+    $("lab-sensitivity").innerHTML=`<div class="lab-table-wrap"><table class="lab-table"><thead><tr><th>Factor</th><th>Profile A (%)</th><th>Profile B (%)</th></tr></thead><tbody>${keys.map(key=>`<tr><td>${esc(names[key]||key)}</td><td><input type="number" min="0" max="100" step="1" data-sens="a" data-key="${esc(key)}" value="${Math.round(base[key]*100)}" aria-label="Profile A ${esc(names[key]||key)} weight"></td><td><input type="number" min="0" max="100" step="1" data-sens="b" data-key="${esc(key)}" value="${Math.round(alt[key]*100)}" aria-label="Profile B ${esc(names[key]||key)} weight"></td></tr>`).join("")}</tbody></table></div>`;
+    $("lab-sensitivity").querySelectorAll("[data-sens]").forEach(input=>input.addEventListener("input",renderSensitivityResults));
+    renderSensitivityResults();
+  };
+  const renderSensitivityResults=()=>{
+    const profiles=["a","b"].map(which=>{const values={};document.querySelectorAll(`[data-sens="${which}"]`).forEach(input=>values[input.dataset.key]=Number(input.value));return normalize(values);});
+    const output=$("lab-sensitivity-output");
+    if(profiles.some(profile=>!profile)){output.innerHTML='<p class="lab-result">Each profile needs a positive total weight.</p>';return;}
+    output.innerHTML=profiles.map((weights,index)=>{const ranking=rankWith(weights),total=[...document.querySelectorAll(`[data-sens="${index?"b":"a"}"]`)].reduce((sum,input)=>sum+Number(input.value||0),0),winner=ranking[0];return `<div class="lab-result"><h4>Profile ${index?"B":"A"} · entered total ${total}% (normalized to 100%)</h4>${winner?`<p>Top choice: <strong>${esc(app.displayName(winner.item))}</strong> · ${winner.score}%</p>`:"<p>Select options to compare rankings.</p>"}<ol class="lab-rank">${ranking.map(row=>`<li>${esc(app.displayName(row.item))} — ${row.score}%</li>`).join("")}</ol></div>`;}).join("");
+    const a=rankWith(profiles[0])[0],b=rankWith(profiles[1])[0];
+    if(a&&b&&a.item.id!==b.item.id)output.insertAdjacentHTML("afterbegin",`<p class="lab-badge" style="grid-column:1/-1">Recommendation changes: ${esc(app.displayName(a.item))} → ${esc(app.displayName(b.item))}</p>`);
+  };
+  const renderImpact=()=>{
+    const item=chosen();
+    if(!item){$("lab-impact").innerHTML="<p class='sdh-empty'>Select an option to map trade-offs.</p>";return;}
+    const weighted=factors(item).sort((a,b)=>b.score-a.score),high=weighted[0],low=weighted[weighted.length-1];
+    const cost=type==="Laptop"?money(item.price):type==="College"?money(item.fees)+" / year":item.salary+" LPA";
+    $("lab-impact").innerHTML=`<div class="lab-impact"><div class="lab-impact-node">${esc(app.displayName(item))}<br><small>${score(item)}% overall match</small></div><div class="lab-impact-link">${esc(high.name)} drives strongest fit<br>${Math.round(high.score)}%</div><div class="lab-impact-node">${esc(high.name)} strength</div><div class="lab-impact-node">${cost}<br><small>${type==="College"?"annual fees":type==="Job"?"gross sample salary":"listed sample price"}</small></div><div class="lab-impact-link">${esc(low.name)} is the trade-off<br>${Math.round(low.score)}%</div><div class="lab-impact-node">${esc(low.name)} trade-off</div></div><p style="margin-top:10px">${type==="Laptop"?"Performance may involve a higher purchase price or a different battery fit.":type==="College"?"Lower fees may mean choosing a different location or facility profile.":"A higher salary may come with different work mode, location, or balance."} The map describes sample-factor relationships, not a causal or guaranteed outcome.</p>`;
+  };
+  const renderOpinions=()=>{
+    const profiles=type==="Laptop"?[
+      {name:"Budget-focused",weights:{budget:.55,processor:.12,ram:.08,battery:.08,storage:.08,rating:.09}},
+      {name:"Performance-focused",weights:{budget:.08,processor:.48,ram:.18,battery:.06,storage:.12,rating:.08}},
+      {name:"Career-focused",weights:{budget:.12,processor:.28,ram:.19,battery:.12,storage:.17,rating:.12}},
+      {name:"Risk-averse",weights:{budget:.25,processor:.12,ram:.1,battery:.12,storage:.12,rating:.41}}
+    ]:type==="College"?[
+      {name:"Budget-focused",weights:{fees:.48,placement:.18,package:.08,infra:.07,faculty:.08,rating:.13}},
+      {name:"Career-focused",weights:{fees:.08,placement:.38,package:.25,infra:.08,faculty:.08,rating:.15}},
+      {name:"Research-focused",weights:{fees:.08,placement:.08,package:.08,infra:.28,faculty:.33,rating:.17}},
+      {name:"Risk-averse",weights:{fees:.25,placement:.22,package:.1,infra:.08,faculty:.12,rating:.25}}
+    ]:[
+      {name:"Budget-focused",weights:{salary:.5,growth:.15,wlb:.1,rating:.15,modeLoc:.12}},
+      {name:"Career-focused",weights:{salary:.2,growth:.42,wlb:.12,rating:.18,modeLoc:.1}},
+      {name:"Work-life-focused",weights:{salary:.14,growth:.12,wlb:.42,rating:.16,modeLoc:.18}},
+      {name:"Risk-averse",weights:{salary:.18,growth:.14,wlb:.25,rating:.33,modeLoc:.12}}
+    ];
+    $("lab-opinions").innerHTML=profiles.map(profile=>{const weights=normalize(Object.fromEntries(Object.keys(app.weights()).map(key=>[key,profile.weights[key]||.01]))),ranks=rankWith(weights);return `<div class="lab-result"><h4>${profile.name} · simulated</h4><ol class="lab-rank">${ranks.slice(0,3).map(row=>`<li>${esc(app.displayName(row.item))} — ${row.score}%</li>`).join("")||"<li>Select options for simulated rankings.</li>"}</ol></div>`;}).join("");
+  };
+  const renderReadiness=()=>{
+    const items=selected(),issues=[];
+    if(!goalSelect.value)issues.push("Choose a personal goal.");
+    if(items.length<2)issues.push("Compare at least two options.");
+    if(!items.some(item=>app.eligible(item,app.prefs())))issues.push("No selected option currently meets all existing mandatory filters.");
+    if(!items.some(item=>compatibility(item).status!=="Not Compatible"))issues.push("No selected option currently passes its critical compatibility requirements.");
+    if(!$("lab-risks").checked)issues.push("Review risks and confirm unknown specifications.");
+    if(!$("lab-alternatives").checked)issues.push("Mark that you considered alternatives and trade-offs.");
+    const checks=6-issues.length,percent=Math.round(checks/6*100),status=percent>=100?"Ready to Decide":percent>=67?"Almost Ready":"More Information Needed";
+    $("lab-readiness").innerHTML=`<h4>${status} · ${percent}%</h4><div class="lab-progress"><span style="width:${percent}%"></span></div>${issues.length?`<ul>${issues.map(issue=>`<li>${esc(issue)}</li>`).join("")}</ul>`:"<p>Core requirements, alternatives, and risk review are complete. Verify final details with the provider before committing.</p>"}`;
+  };
+  const readJournal=()=>{try{const data=JSON.parse(localStorage.getItem(journalKey)||"[]");return Array.isArray(data)?data:[];}catch(error){app.notify("Could not read decision journal: "+error.message,"error");return [];}};
+  const storeJournal=(entries)=>{try{localStorage.setItem(journalKey,JSON.stringify(entries));return true;}catch(error){app.notify("Could not save decision journal: "+error.message,"error");return false;}};
+  const drawJournal=()=>{$("lab-journal-list").innerHTML=readJournal().map(entry=>`<div class="lab-journal-row"><div><strong>${esc(entry.choiceName||entry.choice||"Decision")}</strong><div>${new Date(entry.date).toLocaleString()} · priority: ${esc(entry.priority||"not specified")}</div><p>${esc(entry.why||"")}</p></div><div class="lab-actions"><button type="button" class="btn btn-ghost btn-sm" data-journal-edit="${esc(entry.id)}">Edit</button><button type="button" class="btn btn-danger btn-sm" data-journal-delete="${esc(entry.id)}">Delete</button></div></div>`).join("")||'<p class="sdh-empty">No decision records saved yet. Your notes stay in this browser.</p>';};
+  const saveJournal=()=>{
+    const choice=Number($("lab-journal-choice").value),item=app.options.find(option=>option.id===choice);
+    if(!item){app.notify("Choose the option you selected before saving.","error");return;}
+    const why=$("lab-journal-why").value.trim();
+    if(!why){app.notify("Add a short reason for your choice.","error");$("lab-journal-why").focus();return;}
+    const entries=readJournal(),record={id:editingId||Date.now().toString(36),date:new Date().toISOString(),optionId:item.id,choiceName:app.displayName(item),priority:$("lab-journal-priority").value.trim(),why,rejected:$("lab-journal-rejected").value.trim(),notes:$("lab-journal-notes").value.trim()};
+    const next=editingId?entries.map(entry=>entry.id===editingId?record:entry):[record,...entries];
+    if(storeJournal(next)){editingId=null;$("lab-journal-save").textContent="Save decision record";$("lab-journal-cancel").hidden=true;$("lab-journal-choice").value="";$("lab-journal-priority").value="";$("lab-journal-why").value="";$("lab-journal-rejected").value="";$("lab-journal-notes").value="";drawJournal();app.notify("Decision record saved locally.");}
+  };
+  const renderReports=()=>{
+    const items=selected(),best=chosen(),goal=goalSelect.value;
+    $("lab-reports").innerHTML=items.length?items.map(item=>{
+      const state=compatibility(item),gaps=gapLines(item),ordered=factors(item).sort((a,b)=>b.score-a.score),isBest=best?.id===item.id;
+      const prefs=app.prefs();
+      const additional=type==="Laptop"?Math.max(0,item.price-Number(prefs.budget||item.price)):type==="College"?Math.max(0,item.fees-Number(prefs.maxFees||item.fees)):Math.max(0,Number(prefs.desiredSalary||item.salary)-item.salary);
+      const risks=[...app.alerts(item,app.prefs()),...gaps.map(gap=>gap.text)];
+      const benefits=ordered.slice(0,3).map(f=>`${f.name}: ${Math.round(f.score)}%`);
+      const drawbacks=ordered.slice(-3).reverse().map(f=>`${f.name}: ${Math.round(f.score)}%`);
+      const additionalLabel=type==="Laptop"?"Estimated amount over budget":type==="College"?"Estimated amount over annual fee limit":"Salary gap against desired target";
+      const additionalValue=type==="Job"?`${additional.toFixed(1)} LPA below target`:additional?money(additional):"No gap against configured target";
+      return `<article class="lab-report"><h3>${esc(app.displayName(item))}${isBest?" · Current top match":""}</h3><div class="lab-report-meta">Fictional sample report · ${new Date().toLocaleDateString()}</div><div class="lab-report-grid"><div><b>Overall match</b><br>${score(item)}%</div><div><b>Goal alignment · ${esc(goal)}</b><br>${align(item)}%</div><div><b>Compatibility</b><br>${state.status}</div><div><b>${additionalLabel}</b><br>${additionalValue}</div></div><div class="lab-two"><div><b>Main advantages</b><ul>${benefits.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div><b>Main disadvantages</b><ul>${drawbacks.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div><p><b>Remaining gaps / risks:</b> ${esc(risks.length?risks.join("; "):"No gaps found in available sample fields; verify unknown details directly.")}</p><p><b>Decision explanation:</b> ${esc(isBest?`Currently the highest-scoring selected option for ${goal}, at ${score(item)}% overall and ${align(item)}% goal alignment.`:`Ranked against the current selection using the displayed priorities; score ${score(item)}% and goal alignment ${align(item)}%.`)}</p><div class="lab-actions"><button class="btn btn-primary btn-sm" type="button" data-print-report>Print / Save PDF</button></div></article>`;
+    }).join(""):'<p class="sdh-empty">Select options above to generate final report cards.</p>';
+  };
+  const renderOpportunityAndNegotiation=()=>{
+    renderOpportunity();renderNegotiation();
+  };
+  const refresh=()=>{
+    renderCompatibility();renderGoal();renderOpportunityAndNegotiation();renderImpact();renderOpinions();renderReadiness();renderReports();renderSensitivityResults();
+  };
+  goalSelect.addEventListener("change",refresh);locSelect.addEventListener("change",refresh);
+  ["lab-ram","lab-software","lab-course","lab-facility","lab-skill","lab-experience","lab-mode"].forEach(id=>{const input=$(id);if(input){input.addEventListener("input",refresh);input.addEventListener("change",refresh);}});
+  $("lab-risks").addEventListener("change",renderReadiness);$("lab-alternatives").addEventListener("change",renderReadiness);
+  $("lab-journal-choice").innerHTML+=[...app.options].map(item=>`<option value="${item.id}">${esc(app.displayName(item))}</option>`).join("");
+  $("lab-journal-save").addEventListener("click",saveJournal);$("lab-journal-cancel").addEventListener("click",()=>{editingId=null;$("lab-journal-save").textContent="Save decision record";$("lab-journal-cancel").hidden=true;});
+  document.addEventListener("click",event=>{
+    const edit=event.target.closest("[data-journal-edit]"),remove=event.target.closest("[data-journal-delete]"),print=event.target.closest("[data-print-report]");
+    if(edit){const entry=readJournal().find(item=>item.id===edit.dataset.journalEdit);if(!entry)return;editingId=entry.id;$("lab-journal-choice").value=String(entry.optionId??entry.choiceId??app.options.find(option=>app.displayName(option)===entry.choice)?.id??"");$("lab-journal-priority").value=entry.priority||"";$("lab-journal-why").value=entry.why||"";$("lab-journal-rejected").value=entry.rejected||"";$("lab-journal-notes").value=entry.notes||"";$("lab-journal-save").textContent="Update decision record";$("lab-journal-cancel").hidden=false;$("lab-journal-choice").focus();}
+    if(remove&&confirm("Delete this local decision record?")){if(storeJournal(readJournal().filter(item=>item.id!==remove.dataset.journalDelete)))drawJournal();}
+    if(print){const report=print.closest(".lab-report");document.querySelectorAll(".lab-print-focus").forEach(node=>node.classList.remove("lab-print-focus"));report.classList.add("lab-print-focus");document.body.classList.add("sdh-printing");const cleanup=()=>{document.body.classList.remove("sdh-printing");report.classList.remove("lab-print-focus");window.removeEventListener("afterprint",cleanup);};window.addEventListener("afterprint",cleanup);window.print();setTimeout(cleanup,1000);}
+  });
+  let appRefreshTimer=0;
+  const originalUpdate=app.update;
+  if(typeof originalUpdate==="function"){app.update=function(...args){const result=originalUpdate.apply(this,args);clearTimeout(appRefreshTimer);appRefreshTimer=setTimeout(refresh,0);return result;};}
+  const populateJournal=()=>{drawJournal();const entries=readJournal();entries.forEach(entry=>{if(!entry.optionId){const item=app.options.find(option=>app.displayName(option)===entry.choiceName);if(item)entry.optionId=item.id;}});};
+  renderSensitivity();populateJournal();refresh();
+  const mutationObserver=new MutationObserver(()=>{clearTimeout(appRefreshTimer);appRefreshTimer=setTimeout(refresh,80);});
+  const compare=document.getElementById("comparisonSection");
+  if(compare)mutationObserver.observe(compare,{childList:true,subtree:true});
+})();
+</script>
+</body>
+</html>

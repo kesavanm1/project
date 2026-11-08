@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Decision Helper - College Selection</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #14213D; --secondary: #2563EB; --accent: #7C3AED; --bg: #F5F7FB; --surface: #FFFFFF; --surface-2: #EEF2F9;
+    --text: #14213D; --text-muted: #64748B; --border: #E2E8F0; --success: #16A34A; --warning: #F59E0B; --error: #DC2626;
+    --shadow: 0 1px 3px rgba(20,33,61,0.08), 0 1px 2px rgba(20,33,61,0.06);
+    --shadow-lg: 0 10px 30px rgba(20,33,61,0.10); --radius: 14px; --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #0B1220; --surface: #111A2E; --surface-2: #1A2540; --text: #E2E8F0; --text-muted: #94A3B8; --border: #243352;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4); --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; background: var(--bg); color: var(--text); line-height:1.5; transition: background .3s, color .3s; }
+  a { color: var(--secondary); text-decoration:none; }
+  .app { display:flex; min-height:100vh; }
+  .sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:50; transition: transform .3s ease; }
+  .sidebar .brand { padding:22px 20px; display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; color:var(--primary); border-bottom:1px solid var(--border); }
+  [data-theme="dark"] .sidebar .brand { color:#93C5FD; }
+  .sidebar .brand i { color:var(--secondary); font-size:1.3rem; }
+  .nav-section { padding:12px 12px; flex:1; overflow-y:auto; }
+  .nav-section h4 { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); padding:10px 12px 6px; }
+  .nav-link { display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:var(--radius-sm); color:var(--text-muted); font-size:.92rem; font-weight:500; margin-bottom:2px; transition: all .2s; }
+  .nav-link:hover { background:var(--surface-2); color:var(--text); }
+  .nav-link.active { background: linear-gradient(135deg,var(--secondary),var(--accent)); color:#fff; }
+  .nav-link i { width:20px; text-align:center; }
+  .main { flex:1; margin-left:240px; display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:64px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:40; }
+  .topbar .menu-btn { display:none; background:none; border:none; color:var(--text); font-size:1.3rem; cursor:pointer; }
+  .topbar .page-title { font-weight:600; font-size:1rem; }
+  .topbar .actions { display:flex; align-items:center; gap:12px; }
+  .theme-toggle { background:var(--surface-2); border:1px solid var(--border); width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); transition: all .25s; }
+  .theme-toggle:hover { transform: scale(1.08); }
+  .content { padding:26px 24px 60px; max-width:1280px; margin:0 auto; width:100%; }
+  .content > header { margin-bottom:22px; }
+  .content > header h1 { font-size:1.6rem; font-weight:700; }
+  .content > header p { color:var(--text-muted); margin-top:4px; max-width:680px; font-size:.95rem; }
+  .grid { display:grid; gap:18px; }
+  .summary-cards { grid-template-columns: repeat(5,1fr); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; }
+  .stat-card { display:flex; flex-direction:column; gap:6px; }
+  .stat-card .label { font-size:.78rem; color:var(--text-muted); font-weight:500; }
+  .stat-card .value { font-size:1.5rem; font-weight:700; }
+  .stat-card .icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:6px; }
+  .stat-card .icon.blue { background:rgba(37,99,235,.12); color:var(--secondary); }
+  .stat-card .icon.purple { background:rgba(124,58,237,.12); color:var(--accent); }
+  .stat-card .icon.green { background:rgba(22,163,74,.12); color:var(--success); }
+  .stat-card .icon.orange { background:rgba(245,158,11,.12); color:var(--warning); }
+  .stat-card .icon.navy { background:rgba(20,33,61,.10); color:var(--primary); }
+  [data-theme="dark"] .stat-card .icon.navy { color:#93C5FD; background:rgba(147,197,253,.12); }
+  .section-title { font-size:1.15rem; font-weight:600; margin:26px 0 14px; display:flex; align-items:center; gap:10px; }
+  .section-title i { color:var(--secondary); }
+  .filters { display:grid; grid-template-columns: repeat(2,1fr); gap:16px; }
+  .filter-item { display:flex; flex-direction:column; gap:6px; }
+  .filter-item label { font-size:.82rem; font-weight:600; color:var(--text-muted); display:flex; justify-content:space-between; }
+  .filter-item label .val { color:var(--secondary); font-weight:700; }
+  input[type="text"], select { padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:.9rem; transition: border .2s, box-shadow .2s; width:100%; }
+  input[type="text"]:focus, select:focus { outline:none; border-color:var(--secondary); box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  input[type="range"] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:6px; background:var(--surface-2); outline:none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:var(--secondary); cursor:pointer; border:3px solid var(--surface); box-shadow:0 1px 4px rgba(0,0,0,.2); transition: transform .15s; }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--secondary); cursor:pointer; border:3px solid var(--surface); }
+  .btn { padding:10px 16px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-size:.88rem; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition: all .2s; }
+  .btn-ghost { background:var(--surface-2); color:var(--text); }
+  .btn-ghost:hover { background:var(--border); }
+  .college-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:16px; }
+  .college-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px; transition: transform .2s, box-shadow .2s; }
+  .college-card:hover { transform: translateY(-3px); box-shadow:var(--shadow-lg); }
+  .college-card .head { display:flex; justify-content:space-between; align-items:flex-start; }
+  .college-card .loc { font-size:.78rem; color:var(--text-muted); font-weight:600; }
+  .college-card .fees { font-weight:700; color:var(--secondary); }
+  .college-card .name { font-size:1.02rem; font-weight:600; }
+  .college-card .specs { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:var(--surface-2); color:var(--text-muted); font-size:.74rem; padding:3px 9px; border-radius:20px; font-weight:500; }
+  .college-card .rating { display:flex; align-items:center; gap:4px; font-size:.85rem; }
+  .college-card .rating i { color:var(--warning); }
+  .college-card .courses { display:flex; flex-wrap:wrap; gap:4px; }
+  .course-pill { background:rgba(124,58,237,.10); color:var(--accent); font-size:.72rem; padding:2px 8px; border-radius:20px; font-weight:600; }
+  .college-card .score-badge { font-size:.8rem; font-weight:700; padding:4px 10px; border-radius:20px; align-self:flex-start; }
+  .add-btn { margin-top:auto; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:var(--radius-sm); cursor:pointer; font-size:.82rem; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; transition: all .2s; }
+  .add-btn:hover { background:var(--secondary); color:#fff; border-color:var(--secondary); }
+  .add-btn.added { background:var(--success); color:#fff; border-color:var(--success); }
+  .compare-wrapper { overflow-x:auto; }
+  .compare-table { width:100%; border-collapse:collapse; min-width:700px; }
+  .compare-table th, .compare-table td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); font-size:.88rem; }
+  .compare-table th { background:var(--surface-2); font-weight:600; color:var(--text-muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+  .compare-table td .remove-link { color:var(--error); cursor:pointer; font-size:.78rem; font-weight:600; }
+  .compare-table tr.best-row { background:rgba(22,163,74,.06); }
+  .best-card { background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.08)); border:1px solid rgba(124,58,237,.25); border-radius:var(--radius); padding:20px; display:flex; gap:16px; align-items:center; }
+  .best-card .crown { width:54px; height:54px; border-radius:14px; background:linear-gradient(135deg,var(--secondary),var(--accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.5rem; flex-shrink:0; }
+  .best-card .info h3 { font-size:1.1rem; }
+  .best-card .info p { color:var(--text-muted); font-size:.88rem; margin-top:4px; }
+  .best-card .score { margin-left:auto; text-align:center; }
+  .best-card .score .num { font-size:2rem; font-weight:800; color:var(--success); }
+  .chart-container { position:relative; height:300px; }
+  .empty-state { text-align:center; padding:50px 20px; color:var(--text-muted); }
+  .empty-state i { font-size:2.5rem; margin-bottom:12px; color:var(--border); }
+  .empty-state h3 { font-size:1.05rem; color:var(--text); margin-bottom:6px; }
+  .empty-state p { font-size:.88rem; }
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--success); padding:12px 18px; border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:.88rem; font-weight:500; z-index:100; transform:translateY(120%); transition: transform .35s cubic-bezier(.2,.8,.2,1); max-width:320px; }
+  .toast.show { transform: translateY(0); }
+  .toast.error { border-left-color:var(--error); }
+  .toast.warn { border-left-color:var(--warning); }
+  footer { text-align:center; padding:24px; color:var(--text-muted); font-size:.82rem; border-top:1px solid var(--border); margin-top:40px; }
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:45; }
+  .overlay.show { display:block; }
+  .badge-flag { font-size:.72rem; padding:2px 8px; border-radius:20px; font-weight:600; }
+  .badge-flag.over { background:rgba(220,38,38,.1); color:var(--error); }
+  .badge-flag.ok { background:rgba(22,163,74,.1); color:var(--success); }
+  .badge-flag.nocourse { background:rgba(245,158,11,.12); color:var(--warning); }
+  @media (max-width:1024px){ .summary-cards{grid-template-columns:repeat(3,1fr);} .filters{grid-template-columns:1fr;} }
+  @media (max-width:768px){
+    .sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .main{margin-left:0;}
+    .topbar .menu-btn{display:block;} .summary-cards{grid-template-columns:repeat(2,1fr);}
+    .content{padding:18px 16px 50px;} .best-card{flex-direction:column;text-align:center;} .best-card .score{margin-left:0;}
+  }
+  @media (max-width:480px){ .summary-cards{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><i class="fa-solid fa-brain"></i> Smart Decision Helper</div>
+    <nav class="nav-section">
+      <h4>Helpers</h4>
+      <a href="laptop-helper.html" class="nav-link"><i class="fa-solid fa-laptop"></i> Laptop Selection</a>
+      <a href="college-helper.html" class="nav-link active"><i class="fa-solid fa-graduation-cap"></i> College Selection</a>
+      <a href="job-helper.html" class="nav-link"><i class="fa-solid fa-briefcase"></i> Job Offer Comparison</a>
+      <h4 style="margin-top:14px;">About</h4>
+      <div style="padding:8px 12px;font-size:.8rem;color:var(--text-muted);line-height:1.5;">Compare colleges by fees, placements, courses and infrastructure with live scores.</div>
+    </nav>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle menu"><i class="fa-solid fa-bars"></i></button>
+      <div class="page-title">College Selection Helper</div>
+      <div class="actions"><button class="theme-toggle" id="themeToggle" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button></div>
+    </header>
+    <div class="content">
+      <header>
+        <h1>College Selection Helper</h1>
+        <p>Compare colleges by fees, placements, courses, infrastructure and faculty. Add up to five colleges to see live compatibility scores and a clear best recommendation.</p>
+        <p style="margin-top:6px;font-size:.78rem;color:var(--text-muted);"><i class="fa-solid fa-circle-info"></i> All college records are fictional sample data.</p>
+      </header>
+      <div class="grid summary-cards">
+        <div class="card stat-card"><div class="icon blue"><i class="fa-solid fa-building-columns"></i></div><div class="label">Total Colleges</div><div class="value" id="statTotal">0</div></div>
+        <div class="card stat-card"><div class="icon navy"><i class="fa-solid fa-indian-rupee-sign"></i></div><div class="label">Average Fees</div><div class="value" id="statAvg">₹0</div></div>
+        <div class="card stat-card"><div class="icon green"><i class="fa-solid fa-chart-line"></i></div><div class="label">Highest Placement</div><div class="value" id="statPlace">0%</div></div>
+        <div class="card stat-card"><div class="icon orange"><i class="fa-solid fa-star"></i></div><div class="label">Best Rated</div><div class="value" id="statBestRated">-</div></div>
+        <div class="card stat-card"><div class="icon purple"><i class="fa-solid fa-layer-group"></i></div><div class="label">Selected</div><div class="value" id="statSelected">0 / 5</div></div>
+      </div>
+      <h2 class="section-title"><i class="fa-solid fa-sliders"></i> Preferences & Filters</h2>
+      <div class="card">
+        <div class="filters">
+          <div class="filter-item"><label for="search"><span>Search</span><span class="val" id="searchCount"></span></label><input type="text" id="search" placeholder="Search by college name..." /></div>
+          <div class="filter-item"><label for="locFilter">Location</label><select id="locFilter"><option value="">All Locations</option></select></div>
+          <div class="filter-item"><label for="courseFilter">Course</label><select id="courseFilter"><option value="">All Courses</option></select></div>
+          <div class="filter-item"><label for="maxFees"><span>Max Annual Fees</span><span class="val" id="maxFeesVal">₹2,00,000</span></label><input type="range" id="maxFees" min="40000" max="300000" step="5000" value="300000" /></div>
+          <div class="filter-item"><label for="minPlacement"><span>Min Placement %</span><span class="val" id="minPlacementVal">0%</span></label><input type="range" id="minPlacement" min="0" max="100" step="5" value="0" /></div>
+          <div class="filter-item"><label for="infra"><span>Infrastructure Importance</span><span class="val" id="infraVal">5 / 10</span></label><input type="range" id="infra" min="1" max="10" step="1" value="5" /></div>
+          <div class="filter-item"><label for="faculty"><span>Faculty Importance</span><span class="val" id="facultyVal">5 / 10</span></label><input type="range" id="faculty" min="1" max="10" step="1" value="5" /></div>
+          <div class="filter-item" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-ghost" id="resetBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button></div>
+        </div>
+      </div>
+      <h2 class="section-title"><i class="fa-solid fa-list"></i> Available Colleges <span style="font-size:.85rem;color:var(--text-muted);font-weight:400;" id="listCount"></span></h2>
+      <div class="college-grid" id="collegeGrid"></div>
+      <div class="empty-state" id="collegeEmpty" style="display:none;"><i class="fa-solid fa-magnifying-glass"></i><h3>No colleges found</h3><p>Try adjusting your search or filters.</p></div>
+      <h2 class="section-title"><i class="fa-solid fa-code-compare"></i> Comparison & Ranking</h2>
+      <div id="comparisonSection">
+        <div class="empty-state"><i class="fa-solid fa-code-compare"></i><h3>No colleges selected for comparison</h3><p>Click "Add to Comparison" on colleges above to see them ranked here.</p></div>
+      </div>
+      <div id="chartsSection" style="display:none;">
+        <h2 class="section-title"><i class="fa-solid fa-chart-column"></i> Visualizations</h2>
+        <div class="grid" style="grid-template-columns:1fr 1fr;">
+          <div class="card"><h3 style="font-size:.95rem;margin-bottom:12px;">Annual Fees Comparison (₹)</h3><div class="chart-container"><canvas id="feeChart"></canvas></div></div>
+          <div class="card"><h3 style="font-size:.95rem;margin-bottom:12px;">Placement Percentage</h3><div class="chart-container"><canvas id="placementChart"></canvas></div></div>
+        </div>
+        <div class="card" style="margin-top:18px;"><h3 style="font-size:.95rem;margin-bottom:12px;">College Ranking (Compatibility Score)</h3><div class="chart-container"><canvas id="rankChart"></canvas></div></div>
+      </div>
+      <footer>Smart Decision Helper &middot; College Selection &middot; Built with HTML, CSS &amp; Vanilla JavaScript &middot; Sample data for demonstration.</footer>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  "use strict";
+  const COLLEGES = [
+    { id:1, name:"ABC Institute of Technology", location:"Coimbatore", fees:90000,  placement:85,  averagePackage:5.5,  infrastructure:8, faculty:8, courses:["CSE","IT","ECE"], rating:4.3 },
+    { id:2, name:"Chennai Engineering College", location:"Chennai",   fees:120000, placement:92,  averagePackage:6.8,  infrastructure:9, faculty:7, courses:["CSE","IT","MECH"], rating:4.5 },
+    { id:3, name:"Madurai Tech University",     location:"Madurai",   fees:75000,  placement:70,  averagePackage:4.0,  infrastructure:7, faculty:6, courses:["CSE","ECE","CIVIL"], rating:3.9 },
+    { id:4, name:"Salem Polytechnic",           location:"Salem",     fees:60000,  placement:65,  averagePackage:3.5,  infrastructure:6, faculty:7, courses:["IT","MECH","CIVIL"], rating:3.7 },
+    { id:5, name:"Coimbatore Tech Academy",     location:"Coimbatore",fees:110000, placement:88,  averagePackage:6.0,  infrastructure:8, faculty:8, courses:["CSE","AI","ML"], rating:4.4 },
+    { id:6, name:"Tirunelveli Engineering",     location:"Tirunelveli",fees:85000, placement:78,  averagePackage:4.8,  infrastructure:7, faculty:7, courses:["CSE","ECE","IT"], rating:4.0 },
+    { id:7, name:"Vellore Tech Institute",      location:"Vellore",   fees:175000, placement:95,  averagePackage:8.5,  infrastructure:9, faculty:9, courses:["CSE","AI","DS"], rating:4.8 },
+    { id:8, name:"Trichy Engineering College",  location:"Trichy",    fees:70000,  placement:72,  averagePackage:4.2,  infrastructure:6, faculty:6, courses:["CSE","MECH","CIVIL"], rating:3.8 },
+    { id:9, name:"Erode Tech Campus",           location:"Erode",     fees:95000,  placement:80,  averagePackage:5.2,  infrastructure:7, faculty:8, courses:["CSE","IT","ECE","AI"], rating:4.1 },
+    { id:10,name:"Chennai Metro University",    location:"Chennai",   fees:200000, placement:96,  averagePackage:9.0,  infrastructure:10,faculty:9,courses:["CSE","AI","ML","DS"], rating:4.9 },
+    { id:11,name:"Kanyakumari Tech",            location:"Kanyakumari",fees:55000,placement:60,  averagePackage:3.2,  infrastructure:5, faculty:6, courses:["IT","MECH"], rating:3.5 },
+    { id:12,name:"Dindigul Engineering",        location:"Dindigul",  fees:80000,  placement:75,  averagePackage:4.5,  infrastructure:7, faculty:7, courses:["CSE","ECE","IT","CIVIL"], rating:4.0 },
+  ];
+
+  const DEFAULTS = { search:"", location:"", course:"", maxFees:300000, minPlacement:0, infra:5, faculty:5 };
+  let prefs = { ...DEFAULTS };
+  let selectedIds = [];
+  let filteredColleges = [...COLLEGES];
+  let feeChart=null, placementChart=null, rankChart=null;
+  const MAX_COMPARE = 5;
+  const WEIGHTS = { fees:0.25, placement:0.30, package:0.15, infra:0.10, faculty:0.10, rating:0.10 };
+  const STORAGE_KEY = "sdh_college_selected";
+  const $ = id => document.getElementById(id);
+  const inr = n => "₹" + n.toLocaleString("en-IN");
+
+  function saveSelected(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedIds)); }catch(e){} }
+  function loadSelected(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s){ const a=JSON.parse(s); if(Array.isArray(a)) selectedIds=a.slice(0,MAX_COMPARE);} }catch(e){} }
+
+  function initTheme(){ try{ const t=localStorage.getItem("sdh_theme"); if(t) document.documentElement.setAttribute("data-theme",t); updateThemeIcon(); }catch(e){} }
+  function toggleTheme(){ const c=document.documentElement.getAttribute("data-theme")||"light"; const n=c==="light"?"dark":"light"; document.documentElement.setAttribute("data-theme",n); try{localStorage.setItem("sdh_theme",n);}catch(e){} updateThemeIcon(); renderCharts(); }
+  function updateThemeIcon(){ const d=document.documentElement.getAttribute("data-theme")==="dark"; $("themeToggle").innerHTML = d?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>'; }
+
+  let toastTimer=null;
+  function toast(msg,type){ const el=$("toast"); el.textContent=msg; el.className="toast show "+(type||""); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{el.className="toast "+(type||"");},2600); }
+
+  function computeScore(college, p){
+    const overBudget = college.fees > p.maxFees;
+    const noCourse = p.course && !college.courses.includes(p.course);
+    let feesScore;
+    if(overBudget){ const over=(college.fees-p.maxFees)/p.maxFees; feesScore=Math.max(0,50*(1-over)); }
+    else { const ratio=college.fees/p.maxFees; feesScore=Math.max(40,Math.min(100,100-ratio*45)); }
+    const placeNorm = Math.min(100, college.placement);
+    const pkgMax = 10;
+    const pkgNorm = Math.min(100, (college.averagePackage/pkgMax)*100);
+    const infraNorm = (college.infrastructure/10)*100;
+    const facNorm = (college.faculty/10)*100;
+    const ratNorm = (college.rating/5)*100;
+    let score = feesScore*WEIGHTS.fees + placeNorm*WEIGHTS.placement + pkgNorm*WEIGHTS.package
+              + infraNorm*WEIGHTS.infra + facNorm*WEIGHTS.faculty + ratNorm*WEIGHTS.rating;
+    score = Math.max(0, Math.min(100, score));
+    return Math.round(score*10)/10;
+  }
+
+  function reasons(college, p){
+    const r = [];
+    if(college.fees <= p.maxFees) r.push("Within fees budget of "+inr(p.maxFees));
+    else r.push("Over fees budget by "+inr(college.fees-p.maxFees));
+    if(p.course && college.courses.includes(p.course)) r.push("Offers "+p.course);
+    else if(p.course) r.push("Does NOT offer "+p.course);
+    if(college.placement >= p.minPlacement) r.push(college.placement+"% placement meets your "+p.minPlacement+"% target");
+    else r.push("Placement below target");
+    if(college.infrastructure >= 8) r.push("Strong infrastructure ("+college.infrastructure+"/10)");
+    if(college.faculty >= 8) r.push("Strong faculty ("+college.faculty+"/10)");
+    if(college.rating >= 4.5) r.push("Highly rated ("+college.rating+"/5)");
+    return r.length ? r : ["Basic match for your preferences"];
+  }
+
+  function getScoredSelected(){
+    const all = selectedIds.map(id => {
+      const c = COLLEGES.find(x=>x.id===id);
+      if(!c) return null;
+      const overBudget = c.fees > prefs.maxFees;
+      const noCourse = prefs.course && !c.courses.includes(prefs.course);
+      const ineligible = overBudget || noCourse;
+      return { ...c, score: computeScore(c, prefs), overBudget, noCourse, ineligible, reasons: reasons(c, prefs) };
+    }).filter(Boolean);
+
+    const eligible = all.filter(c => !c.ineligible).sort((a,b)=> b.score - a.score);
+    const ineligibleList = all.filter(c => c.ineligible).sort((a,b)=> b.score - a.score);
+    return { eligible, ineligibleList, all: [...eligible, ...ineligibleList] };
+  }
+
+  function applyFilters(){
+    const s = prefs.search.toLowerCase().trim();
+    filteredColleges = COLLEGES.filter(c => {
+      if(prefs.location && c.location !== prefs.location) return false;
+      if(s && !c.name.toLowerCase().includes(s)) return false;
+      return true;
+    });
+    renderList();
+    $("searchCount").textContent = filteredColleges.length === COLLEGES.length ? "" : (filteredColleges.length+" match");
+  }
+
+  function renderSummary(){
+    $("statTotal").textContent = COLLEGES.length;
+    const avg = Math.round(COLLEGES.reduce((s,c)=>s+c.fees,0)/COLLEGES.length);
+    $("statAvg").textContent = inr(avg);
+    const maxPlace = Math.max(...COLLEGES.map(c=>c.placement));
+    $("statPlace").textContent = maxPlace+"%";
+    const best = COLLEGES.reduce((a,b)=> a.rating>b.rating?a:b);
+    $("statBestRated").textContent = best.name.split(" ").slice(0,2).join(" ");
+    $("statSelected").textContent = selectedIds.length+" / "+MAX_COMPARE;
+  }
+
+  function renderList(){
+    const grid = $("collegeGrid");
+    $("collegeEmpty").style.display = filteredColleges.length ? "none":"block";
+    $("listCount").textContent = "("+filteredColleges.length+")";
+    grid.innerHTML = "";
+    filteredColleges.forEach(c => {
+      const isSelected = selectedIds.includes(c.id);
+      const score = computeScore(c, prefs);
+      const overBudget = c.fees > prefs.maxFees;
+      const noCourse = prefs.course && !c.courses.includes(prefs.course);
+      let badgeColor = (overBudget||noCourse) ? 'rgba(220,38,38,.12)':'rgba(22,163,74,.12)';
+      let badgeText = (overBudget||noCourse) ? 'var(--error)':'var(--success)';
+      let badgeLabel = overBudget ? '(Over Budget)' : (noCourse ? '(No '+prefs.course+')' : '');
+      const card = document.createElement("div");
+      card.className = "college-card";
+      card.innerHTML = `
+        <div class="head"><div><div class="loc"><i class="fa-solid fa-location-dot"></i> ${c.location}</div><div class="name">${c.name}</div></div><div class="fees">${inr(c.fees)}</div></div>
+        <div class="specs">
+          <span class="chip"><i class="fa-solid fa-briefcase"></i> ${c.placement}% placed</span>
+          <span class="chip"><i class="fa-solid fa-indian-rupee-sign"></i> ${c.averagePackage} LPA avg</span>
+          <span class="chip"><i class="fa-solid fa-building"></i> Infra ${c.infrastructure}/10</span>
+          <span class="chip"><i class="fa-solid fa-chalkboard-user"></i> Faculty ${c.faculty}/10</span>
+        </div>
+        <div class="courses">${c.courses.map(co=>'<span class="course-pill">'+co+'</span>').join("")}</div>
+        <div class="rating"><i class="fa-solid fa-star"></i> ${c.rating} / 5</div>
+        <div class="score-badge" style="background:${badgeColor};color:${badgeText};">Score ${score} ${badgeLabel}</div>
+        <button class="add-btn ${isSelected?'added':''}" data-id="${c.id}">${isSelected?'<i class="fa-solid fa-check"></i> Added':'<i class="fa-solid fa-plus"></i> Add to Comparison'}</button>`;
+      grid.appendChild(card);
+    });
+    grid.querySelectorAll(".add-btn").forEach(btn => btn.addEventListener("click", ()=> toggleSelect(parseInt(btn.dataset.id,10))));
+  }
+
+  function toggleSelect(id){
+    const idx = selectedIds.indexOf(id);
+    if(idx >= 0){ selectedIds.splice(idx,1); saveSelected(); toast("Removed from comparison","warn"); updateAll(); }
+    else {
+      if(selectedIds.length >= MAX_COMPARE){ toast("You can compare up to "+MAX_COMPARE+" colleges at a time","error"); return; }
+      selectedIds.push(id); saveSelected();
+      const c = COLLEGES.find(x=>x.id===id);
+      toast("Added "+c.name.split(" ").slice(0,2).join(" ")+" to comparison");
+      updateAll();
+    }
+  }
+
+  function renderComparison(){
+    const section = $("comparisonSection");
+    const result = getScoredSelected();
+    const scored = result.all;
+    if(scored.length === 0){
+      section.innerHTML = '<div class="empty-state"><i class="fa-solid fa-code-compare"></i><h3>No colleges selected for comparison</h3><p>Click "Add to Comparison" on colleges above to see them ranked here.</p></div>';
+      $("chartsSection").style.display = "none";
+      return;
+    }
+    $("chartsSection").style.display = "block";
+
+    let bestCardHtml;
+    if(result.eligible.length > 0){
+      const best = result.eligible[0];
+      bestCardHtml = `
+        <div class="best-card" style="margin-bottom:18px;">
+          <div class="crown"><i class="fa-solid fa-crown"></i></div>
+          <div class="info"><h3>Best Pick: ${best.name}</h3><p>${best.reasons.join(" &middot; ")}</p></div>
+          <div class="score"><div class="num">${best.score}</div><div style="font-size:.75rem;color:var(--text-muted);">Score / 100</div></div>
+        </div>`;
+    } else {
+      bestCardHtml = `
+        <div class="best-card" style="margin-bottom:18px;border-color:rgba(220,38,38,.3);background:linear-gradient(135deg,rgba(220,38,38,.06),rgba(245,158,11,.06));">
+          <div class="crown" style="background:linear-gradient(135deg,var(--warning),var(--error));"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="info"><h3>No eligible college found</h3><p>None of your selected colleges meet all mandatory constraints (fees budget${prefs.course ? " and "+prefs.course+" course" : ""}). Try relaxing your preferences or select other colleges.</p></div>
+        </div>`;
+    }
+
+    let tableHtml = '<div class="card"><div class="compare-wrapper"><table class="compare-table"><thead><tr><th>Rank</th><th>College</th><th>Fees</th><th>Placement</th><th>Avg Package</th><th>Infra</th><th>Faculty</th><th>Courses</th><th>Rating</th><th>Score</th><th></th></tr></thead><tbody>';
+    scored.forEach((c,i) => {
+      const isBest = i===0 && result.eligible.length > 0 && c.id === result.eligible[0].id;
+      const ineligibleFlag = c.overBudget ? '<span class="badge-flag over">Over Budget</span>' : (c.noCourse ? '<span class="badge-flag over">No '+prefs.course+'</span>' : '<span class="badge-flag ok">OK</span>');
+      tableHtml += `<tr class="${isBest?'best-row':''}">
+        <td>${isBest?'<i class="fa-solid fa-crown" style="color:var(--warning)"></i> #1':'-'}</td>
+        <td><strong>${c.name}</strong><br><span style="font-size:.74rem;color:var(--text-muted);">${c.location}</span></td>
+        <td>${inr(c.fees)} ${ineligibleFlag}</td>
+        <td>${c.placement}% ${c.placement<prefs.minPlacement?'<span class="badge-flag over">Below Target</span>':''}</td>
+        <td>${c.averagePackage} LPA</td>
+        <td>${c.infrastructure}/10</td>
+        <td>${c.faculty}/10</td>
+        <td>${c.courses.join(", ")}</td>
+        <td><i class="fa-solid fa-star" style="color:var(--warning)"></i> ${c.rating}</td>
+        <td><strong style="color:${c.ineligible?'var(--error)':'var(--success)'}">${c.score}</strong></td>
+        <td><span class="remove-link" data-id="${c.id}"><i class="fa-solid fa-xmark"></i> Remove</span></td>
+      </tr>`;
+    });
+    tableHtml += '</tbody></table></div></div>';
+    section.innerHTML = bestCardHtml + tableHtml;
+    section.querySelectorAll(".remove-link").forEach(el => el.addEventListener("click", ()=> toggleSelect(parseInt(el.dataset.id,10))));
+    renderCharts();
+  }
+
+  function renderCharts(){
+    const result = getScoredSelected();
+    const scored = result.all;
+    if(scored.length === 0) return;
+    const labels = scored.map(c => c.name.split(" ").slice(0,2).join(" "));
+    const isDark = document.documentElement.getAttribute("data-theme")==="dark";
+    const gridColor = isDark ? "rgba(255,255,255,.08)":"rgba(0,0,0,.06)";
+    const tickColor = isDark ? "#94A3B8":"#64748B";
+    if(feeChart) feeChart.destroy();
+    feeChart = new Chart($("feeChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Fees (₹)", data:scored.map(c=>c.fees), backgroundColor:scored.map(c=>c.overBudget?"rgba(220,38,38,.7)":"rgba(37,99,235,.7)"), borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{ticks:{color:tickColor},grid:{color:gridColor}},y:{ticks:{color:tickColor,callback:v=>"₹"+(v/1000)+"k"},grid:{color:gridColor}}} }
+    });
+    if(placementChart) placementChart.destroy();
+    placementChart = new Chart($("placementChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Placement %", data:scored.map(c=>c.placement), backgroundColor:"rgba(22,163,74,.7)", borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{ticks:{color:tickColor},grid:{color:gridColor}},y:{max:100,ticks:{color:tickColor},grid:{color:gridColor}}} }
+    });
+    if(rankChart) rankChart.destroy();
+    rankChart = new Chart($("rankChart").getContext("2d"), {
+      type:"bar", data:{ labels, datasets:[{ label:"Score /100", data:scored.map(c=>c.score), backgroundColor:scored.map((c,i)=>i===0?"rgba(22,163,74,.8)":"rgba(124,58,237,.6)"), borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y", plugins:{legend:{labels:{color:tickColor}}}, scales:{x:{max:100,ticks:{color:tickColor},grid:{color:gridColor}},y:{ticks:{color:tickColor},grid:{color:gridColor}}} }
+    });
+  }
+
+  function updateAll(){ renderSummary(); applyFilters(); renderComparison(); }
+
+  function resetPrefs(){
+    prefs = { ...DEFAULTS };
+    $("search").value=""; $("locFilter").value=""; $("courseFilter").value="";
+    $("maxFees").value=DEFAULTS.maxFees; $("minPlacement").value=DEFAULTS.minPlacement;
+    $("infra").value=DEFAULTS.infra; $("faculty").value=DEFAULTS.faculty;
+    updateLabels(); updateAll(); toast("Preferences reset to defaults");
+  }
+  function updateLabels(){
+    $("maxFeesVal").textContent = inr(parseInt($("maxFees").value,10));
+    $("minPlacementVal").textContent = $("minPlacement").value+"%";
+    $("infraVal").textContent = $("infra").value+" / 10";
+    $("facultyVal").textContent = $("faculty").value+" / 10";
+  }
+
+  function bindEvents(){
+    $("search").addEventListener("input", e=>{ prefs.search=e.target.value; applyFilters(); });
+    $("locFilter").addEventListener("change", e=>{ prefs.location=e.target.value; applyFilters(); });
+    $("courseFilter").addEventListener("change", e=>{ prefs.course=e.target.value; updateAll(); });
+    $("maxFees").addEventListener("input", e=>{ prefs.maxFees=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("minPlacement").addEventListener("input", e=>{ prefs.minPlacement=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("infra").addEventListener("input", e=>{ prefs.infra=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("faculty").addEventListener("input", e=>{ prefs.faculty=parseInt(e.target.value,10); updateLabels(); updateAll(); });
+    $("resetBtn").addEventListener("click", resetPrefs);
+    $("themeToggle").addEventListener("click", toggleTheme);
+    $("menuBtn").addEventListener("click", ()=>{ $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); });
+    $("overlay").addEventListener("click", ()=>{ $("sidebar").classList.remove("open"); $("overlay").classList.remove("show"); });
+  }
+
+  function init(){
+    const locations = [...new Set(COLLEGES.map(c=>c.location))].sort();
+    locations.forEach(loc => { const o=document.createElement("option"); o.value=loc; o.textContent=loc; $("locFilter").appendChild(o); });
+    const courses = [...new Set(COLLEGES.flatMap(c=>c.courses))].sort();
+    courses.forEach(co => { const o=document.createElement("option"); o.value=co; o.textContent=co; $("courseFilter").appendChild(o); });
+    initTheme(); loadSelected(); bindEvents(); updateLabels(); updateAll();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
